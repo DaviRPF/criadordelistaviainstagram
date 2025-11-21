@@ -175,11 +175,67 @@
             border-radius: 5px;
             font-size: 0.85em;
         }
+
+        .status-badge {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            background: #fee;
+            color: #c33;
+        }
+
+        .status-badge.logado {
+            background: #efe;
+            color: #3c3;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card">
+        <!-- Card de Login Instagram -->
+        <div class="card" id="loginCard">
+            <h2>🔐 Login Instagram</h2>
+            <p class="subtitle">Faça login no Instagram antes de começar a prospecção</p>
+
+            <div class="status-badge" id="loginStatus">
+                <span>❌ Não logado</span>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="instagramUser">Usuário do Instagram</label>
+                    <input
+                        type="text"
+                        id="instagramUser"
+                        placeholder="seu_usuario ou email"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="instagramPass">Senha do Instagram</label>
+                    <input
+                        type="password"
+                        id="instagramPass"
+                        placeholder="••••••••"
+                        required
+                    >
+                </div>
+
+                <button type="submit" id="btnLogin">🔑 Fazer Login</button>
+            </form>
+        </div>
+
+        <!-- Card de Prospecção -->
+        <div class="card" id="prospectorCard" style="opacity: 0.5; pointer-events: none;">
             <h1>🔍 Prospector Instagram</h1>
             <p class="subtitle">Sistema de prospecção automatizada de empresas</p>
 
@@ -232,6 +288,70 @@
     </div>
 
     <script>
+        // Verificar status de login ao carregar
+        async function verificarLogin() {
+            try {
+                const response = await fetch('/api/verificar-login');
+                const data = await response.json();
+
+                if (data.logado) {
+                    marcarComoLogado();
+                }
+            } catch (error) {
+                console.error('Erro ao verificar login:', error);
+            }
+        }
+
+        function marcarComoLogado() {
+            document.getElementById('loginStatus').innerHTML = '<span>✅ Logado com sucesso!</span>';
+            document.getElementById('loginStatus').classList.add('logado');
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('prospectorCard').style.opacity = '1';
+            document.getElementById('prospectorCard').style.pointerEvents = 'auto';
+        }
+
+        // Login no Instagram
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const usuario = document.getElementById('instagramUser').value;
+            const senha = document.getElementById('instagramPass').value;
+            const btnLogin = document.getElementById('btnLogin');
+
+            btnLogin.disabled = true;
+            btnLogin.textContent = '🔄 Fazendo login...';
+
+            try {
+                const response = await fetch('/api/login-instagram', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ usuario, senha })
+                });
+
+                const data = await response.json();
+
+                if (data.sucesso) {
+                    marcarComoLogado();
+                    alert('Login realizado com sucesso!');
+                } else {
+                    alert('Erro no login: ' + data.erro);
+                    btnLogin.disabled = false;
+                    btnLogin.textContent = '🔑 Fazer Login';
+                }
+
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao fazer login');
+                btnLogin.disabled = false;
+                btnLogin.textContent = '🔑 Fazer Login';
+            }
+        });
+
+        // Verificar login ao carregar a página
+        verificarLogin();
+
         document.getElementById('prospectorForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 

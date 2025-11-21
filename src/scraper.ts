@@ -1,6 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Solver } from '@2captcha/captcha-solver';
+import { InstagramAuth } from './instagram-auth';
 
 interface ProspectorConfig {
   tipoEstabelecimento: string;
@@ -8,6 +9,7 @@ interface ProspectorConfig {
   limite?: number;
   geminiApiKey: string;
   twoCaptchaApiKey: string;
+  instagramAuth: InstagramAuth;
 }
 
 interface Resultado {
@@ -330,6 +332,9 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
     try {
       // Setar user agent para parecer navegador real
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+      // Aplicar cookies do Instagram se estiver logado
+      await this.config.instagramAuth.aplicarCookies(page);
 
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       console.log('✅ Perfil carregado');

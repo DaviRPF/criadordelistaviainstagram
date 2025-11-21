@@ -1,7 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { ProspectorScraper } from './scraper';
+import { InstagramAuth } from './instagram-auth';
 
 dotenv.config();
 
@@ -10,6 +12,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static('public'));
+
+// Instância global de autenticação
+const instagramAuth = new InstagramAuth();
 
 // Logger de inicialização
 console.log('====================================');
@@ -38,6 +43,38 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+// Rota para fazer login no Instagram
+app.post('/api/login-instagram', async (req, res) => {
+  const { usuario, senha } = req.body;
+
+  console.log('');
+  console.log('🔐 Tentando fazer login no Instagram...');
+  console.log('  Usuário:', usuario);
+
+  try {
+    await instagramAuth.fazerLogin(usuario, senha);
+
+    console.log('✅ Login realizado com sucesso!');
+    res.json({
+      sucesso: true
+    });
+
+  } catch (error: any) {
+    console.error('❌ Erro ao fazer login:', error.message);
+    res.status(500).json({
+      sucesso: false,
+      erro: error.message
+    });
+  }
+});
+
+// Rota para verificar se está logado
+app.get('/api/verificar-login', (req, res) => {
+  res.json({
+    logado: instagramAuth.estaLogado()
+  });
+});
+
 // Rota para iniciar o scraping
 app.post('/api/iniciar-prospeccao', async (req, res) => {
   const { tipoEstabelecimento, cidade, limite } = req.body;
@@ -55,7 +92,8 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
       cidade,
       limite: limite ? parseInt(limite) : undefined,
       geminiApiKey: process.env.GEMINI_API_KEY!,
-      twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!
+      twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
+      instagramAuth
     });
 
     const resultados = await scraper.executar();
