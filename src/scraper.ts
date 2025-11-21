@@ -2,6 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Solver } from '@2captcha/captcha-solver';
 import { InstagramAuth } from './instagram-auth';
+import { EconodataAuth } from './econodata-auth';
 import { CacheManager } from './cache-manager';
 
 interface ProspectorConfig {
@@ -12,6 +13,7 @@ interface ProspectorConfig {
   geminiModel: string;
   twoCaptchaApiKey: string;
   instagramAuth: InstagramAuth;
+  econodataAuth: EconodataAuth;
   pularProcessadas?: boolean;
   onProgresso?: (resultado: Resultado, atual: number, total: number | string) => void;
   onEstatisticas?: (puladas: number, novas: number) => void;
@@ -971,6 +973,9 @@ RESPOSTA (apenas o número ou NENHUM):`;
     console.log('  📊 Extraindo dados do Econodata...');
 
     try {
+      // Aplicar cookies do Econodata antes de acessar
+      await this.config.econodataAuth.aplicarCookies(page);
+
       await page.goto(url, { waitUntil: 'networkidle2' });
       await page.waitForTimeout(2000); // Esperar conteúdo carregar
 

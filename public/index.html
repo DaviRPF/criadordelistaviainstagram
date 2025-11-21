@@ -371,6 +371,24 @@
             </div>
         </div>
 
+        <!-- Card de Login Econodata -->
+        <div class="card" id="loginEconodataCard">
+            <h2>🔐 Login Econodata</h2>
+            <p class="subtitle">Faça login no Econodata para acessar dados completos de CNPJ (opcional)</p>
+
+            <div class="status-badge" id="loginEconodataStatus">
+                <span>❌ Não logado</span>
+            </div>
+
+            <div id="loginEconodataForm">
+                <p class="small-text" style="margin-bottom: 15px;">
+                    Um navegador será aberto. Faça login no Econodata normalmente e depois <strong>feche o navegador</strong> quando terminar.
+                </p>
+
+                <button type="button" id="btnLoginEconodata">🌐 Abrir Navegador para Login</button>
+            </div>
+        </div>
+
         <!-- Card de Prospecção -->
         <div class="card" id="prospectorCard" style="opacity: 0.5; pointer-events: none;">
             <h1>🔍 Prospector Instagram</h1>
@@ -530,8 +548,63 @@
             }
         });
 
-        // Verificar login ao carregar a página
+        // Verificar status de login Econodata ao carregar
+        async function verificarLoginEconodata() {
+            try {
+                const response = await fetch('/api/verificar-login-econodata');
+                const data = await response.json();
+
+                if (data.logado) {
+                    marcarComoLogadoEconodata();
+                }
+            } catch (error) {
+                console.error('Erro ao verificar login Econodata:', error);
+            }
+        }
+
+        function marcarComoLogadoEconodata() {
+            document.getElementById('loginEconodataStatus').innerHTML = '<span>✅ Logado com sucesso!</span>';
+            document.getElementById('loginEconodataStatus').classList.add('logado');
+            document.getElementById('loginEconodataForm').style.display = 'none';
+        }
+
+        // Login no Econodata
+        document.getElementById('btnLoginEconodata').addEventListener('click', async () => {
+            const btnLoginEconodata = document.getElementById('btnLoginEconodata');
+
+            btnLoginEconodata.disabled = true;
+            btnLoginEconodata.textContent = '🌐 Abrindo navegador...';
+
+            try {
+                const response = await fetch('/api/login-econodata', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.sucesso) {
+                    marcarComoLogadoEconodata();
+                    alert('Login no Econodata salvo com sucesso! Cookies foram salvos.');
+                } else {
+                    alert('Erro: ' + data.erro);
+                    btnLoginEconodata.disabled = false;
+                    btnLoginEconodata.textContent = '🌐 Abrir Navegador para Login';
+                }
+
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao fazer login no Econodata');
+                btnLoginEconodata.disabled = false;
+                btnLoginEconodata.textContent = '🌐 Abrir Navegador para Login';
+            }
+        });
+
+        // Verificar logins ao carregar a página
         verificarLogin();
+        verificarLoginEconodata();
 
         let resultadosAtuais = [];
         let estatisticas = { puladas: 0, novas: 0 };
