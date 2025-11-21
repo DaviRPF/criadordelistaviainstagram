@@ -776,36 +776,73 @@ RESPOSTA (apenas o número ou NENHUM):`;
 
     try {
       await page.goto(url, { waitUntil: 'networkidle2' });
+      await page.waitForTimeout(2000); // Esperar conteúdo carregar
 
-      const dados = await page.evaluate(() => {
-        const getTexto = (selector: string) => {
-          const el = document.querySelector(selector);
-          return el ? el.textContent?.trim() || '' : '';
-        };
+      // Extrair todo o texto visível da página
+      const textoCompleto = await page.evaluate(() => {
+        // Remover scripts, styles e elementos ocultos
+        const elementos = Array.from(document.querySelectorAll('script, style, noscript'));
+        elementos.forEach(el => el.remove());
 
-        return {
-          situacao: getTexto('.situacao'),
-          ativaDesde: getTexto('.ativa-desde'),
-          tipoUnidade: getTexto('.tipo-unidade'),
-          enquadramentoPorte: getTexto('.enquadramento-porte'),
-          sociosAdministradores: Array.from(document.querySelectorAll('.socio')).map((el: Element) => el.textContent?.trim() || '')
-        };
+        return document.body.innerText;
       });
+
+      console.log('  🤖 Usando IA para extrair dados da página...');
+
+      // Usar IA para extrair os dados
+      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+      const prompt = `Analise o seguinte texto extraído de uma página do Econodata sobre uma empresa e extraia as seguintes informações:
+
+1. Situação da empresa (ex: ATIVA, INAPTA, BAIXADA, etc)
+2. Data de abertura / Ativa desde (ex: 01/01/2020)
+3. Tipo de unidade (ex: MATRIZ, FILIAL)
+4. Enquadramento de porte (ex: ME, EPP, DEMAIS, MEI)
+5. Lista de sócios e administradores (nomes das pessoas)
+
+Texto da página:
+"""
+${textoCompleto.substring(0, 8000)}
+"""
+
+Responda EXATAMENTE neste formato JSON:
+{
+  "situacao": "valor ou null",
+  "ativaDesde": "valor ou null",
+  "tipoUnidade": "valor ou null",
+  "enquadramentoPorte": "valor ou null",
+  "socios": ["nome1", "nome2"] ou []
+}
+
+Se não encontrar alguma informação, use null ou [] para socios.`;
+
+      const result = await model.generateContent(prompt);
+      const resposta = result.response.text().trim();
+
+      console.log('  🤖 IA respondeu:', resposta.substring(0, 200));
+
+      // Extrair JSON da resposta
+      const jsonMatch = resposta.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('IA não retornou JSON válido');
+      }
+
+      const dados = JSON.parse(jsonMatch[0]);
 
       console.log('  ✅ Dados extraídos do Econodata');
       console.log('     📋 Situação:', dados.situacao || 'N/A');
       console.log('     📅 Ativa desde:', dados.ativaDesde || 'N/A');
       console.log('     🏢 Tipo de unidade:', dados.tipoUnidade || 'N/A');
       console.log('     📊 Enquadramento de porte:', dados.enquadramentoPorte || 'N/A');
-      console.log('     👥 Sócios/Administradores:', dados.sociosAdministradores.length > 0 ? dados.sociosAdministradores.join(', ') : 'N/A');
+      console.log('     👥 Sócios/Administradores:', dados.socios && dados.socios.length > 0 ? dados.socios.join(', ') : 'N/A');
 
       return {
         cnpjUrl: url,
-        situacao: dados.situacao,
-        ativaDesde: dados.ativaDesde,
-        tipoUnidade: dados.tipoUnidade,
-        enquadramentoPorte: dados.enquadramentoPorte,
-        sociosAdministradores: dados.sociosAdministradores
+        situacao: dados.situacao !== 'null' && dados.situacao ? dados.situacao : undefined,
+        ativaDesde: dados.ativaDesde !== 'null' && dados.ativaDesde ? dados.ativaDesde : undefined,
+        tipoUnidade: dados.tipoUnidade !== 'null' && dados.tipoUnidade ? dados.tipoUnidade : undefined,
+        enquadramentoPorte: dados.enquadramentoPorte !== 'null' && dados.enquadramentoPorte ? dados.enquadramentoPorte : undefined,
+        sociosAdministradores: dados.socios && dados.socios.length > 0 ? dados.socios : []
       };
     } catch (error: any) {
       console.error('  ❌ Erro ao extrair dados Econodata:', error.message);
@@ -819,38 +856,73 @@ RESPOSTA (apenas o número ou NENHUM):`;
 
     try {
       await page.goto(url, { waitUntil: 'networkidle2' });
+      await page.waitForTimeout(2000); // Esperar conteúdo carregar
 
-      const dados = await page.evaluate(() => {
-        const getTexto = (texto: string) => {
-          const els = Array.from(document.querySelectorAll('td, div, span'));
-          const el = els.find((e: Element) => e.textContent?.includes(texto));
-          return (el as Element)?.nextElementSibling?.textContent?.trim() ||
-                 (el as Element)?.textContent?.replace(texto, '').trim() || '';
-        };
+      // Extrair todo o texto visível da página
+      const textoCompleto = await page.evaluate(() => {
+        // Remover scripts, styles e elementos ocultos
+        const elementos = Array.from(document.querySelectorAll('script, style, noscript'));
+        elementos.forEach(el => el.remove());
 
-        return {
-          situacao: getTexto('Situação'),
-          ativaDesde: getTexto('Data de Abertura'),
-          tipoUnidade: getTexto('Tipo'),
-          enquadramentoPorte: getTexto('Porte'),
-          sociosAdministradores: Array.from(document.querySelectorAll('.qsa-item, .socio-item')).map((el: Element) => el.textContent?.trim() || '')
-        };
+        return document.body.innerText;
       });
+
+      console.log('  🤖 Usando IA para extrair dados da página...');
+
+      // Usar IA para extrair os dados
+      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+      const prompt = `Analise o seguinte texto extraído de uma página do CNPJBiz sobre uma empresa e extraia as seguintes informações:
+
+1. Situação da empresa (ex: ATIVA, INAPTA, BAIXADA, etc)
+2. Data de abertura / Ativa desde (ex: 01/01/2020)
+3. Tipo de unidade (ex: MATRIZ, FILIAL)
+4. Enquadramento de porte (ex: ME, EPP, DEMAIS, MEI)
+5. Lista de sócios e administradores (nomes das pessoas)
+
+Texto da página:
+"""
+${textoCompleto.substring(0, 8000)}
+"""
+
+Responda EXATAMENTE neste formato JSON:
+{
+  "situacao": "valor ou null",
+  "ativaDesde": "valor ou null",
+  "tipoUnidade": "valor ou null",
+  "enquadramentoPorte": "valor ou null",
+  "socios": ["nome1", "nome2"] ou []
+}
+
+Se não encontrar alguma informação, use null ou [] para socios.`;
+
+      const result = await model.generateContent(prompt);
+      const resposta = result.response.text().trim();
+
+      console.log('  🤖 IA respondeu:', resposta.substring(0, 200));
+
+      // Extrair JSON da resposta
+      const jsonMatch = resposta.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('IA não retornou JSON válido');
+      }
+
+      const dados = JSON.parse(jsonMatch[0]);
 
       console.log('  ✅ Dados extraídos do CNPJBiz');
       console.log('     📋 Situação:', dados.situacao || 'N/A');
       console.log('     📅 Ativa desde:', dados.ativaDesde || 'N/A');
       console.log('     🏢 Tipo de unidade:', dados.tipoUnidade || 'N/A');
       console.log('     📊 Enquadramento de porte:', dados.enquadramentoPorte || 'N/A');
-      console.log('     👥 Sócios/Administradores:', dados.sociosAdministradores.length > 0 ? dados.sociosAdministradores.join(', ') : 'N/A');
+      console.log('     👥 Sócios/Administradores:', dados.socios && dados.socios.length > 0 ? dados.socios.join(', ') : 'N/A');
 
       return {
         cnpjUrl: url,
-        situacao: dados.situacao,
-        ativaDesde: dados.ativaDesde,
-        tipoUnidade: dados.tipoUnidade,
-        enquadramentoPorte: dados.enquadramentoPorte,
-        sociosAdministradores: dados.sociosAdministradores
+        situacao: dados.situacao !== 'null' && dados.situacao ? dados.situacao : undefined,
+        ativaDesde: dados.ativaDesde !== 'null' && dados.ativaDesde ? dados.ativaDesde : undefined,
+        tipoUnidade: dados.tipoUnidade !== 'null' && dados.tipoUnidade ? dados.tipoUnidade : undefined,
+        enquadramentoPorte: dados.enquadramentoPorte !== 'null' && dados.enquadramentoPorte ? dados.enquadramentoPorte : undefined,
+        sociosAdministradores: dados.socios && dados.socios.length > 0 ? dados.socios : []
       };
     } catch (error: any) {
       console.error('  ❌ Erro ao extrair dados CNPJBiz:', error.message);
