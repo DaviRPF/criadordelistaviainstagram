@@ -298,7 +298,7 @@ export class ProspectorScraper {
 
     // Usar IA para validar o título
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-pro' });
+      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       const prompt = `Analise o seguinte título de resultado do Google e URL:
 
@@ -388,7 +388,7 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
     console.log('     🤖 Usando IA para extrair contato da bio...');
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-pro' });
+      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       const prompt = `Analise a seguinte bio do Instagram e identifique se há número de telefone ou link do WhatsApp:
 
@@ -417,7 +417,7 @@ Se encontrar algum contato, retorne APENAS o número ou link. Se não encontrar,
     console.log('     🤖 Usando IA para identificar nome real...');
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-pro' });
+      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       const prompt = `Entre os dois nomes abaixo, identifique qual é o nome real de um estabelecimento comercial (não o username):
 
@@ -513,7 +513,7 @@ Retorne APENAS o nome real do estabelecimento, formatado de forma legível (sem 
     console.log(`  🤖 Usando IA para identificar resultado correto do ${fonte}...`);
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-pro' });
+      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       const listaResultados = resultados.map((r, i) =>
         `${i + 1}. Título: "${r.titulo}" | URL: ${r.url}`
