@@ -255,6 +255,18 @@
                     <p class="small-text">Se deixar vazio, buscará todas as contas disponíveis</p>
                 </div>
 
+                <div class="form-group">
+                    <label for="modeloIA">🤖 Modelo de IA Gemini</label>
+                    <select id="modeloIA" required>
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental (Mais rápido e recente)</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Estável e rápido)</option>
+                        <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B (Ultra rápido, menor custo)</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Mais preciso, mais lento)</option>
+                        <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini 2.0 Flash Thinking (Raciocínio avançado)</option>
+                    </select>
+                    <p class="small-text">Escolha o modelo de IA que será usado para análise de dados</p>
+                </div>
+
                 <button type="submit" id="btnIniciar">🚀 Iniciar Prospecção</button>
             </form>
 
@@ -339,6 +351,7 @@
             const tipoEstabelecimento = document.getElementById('tipoEstabelecimento').value;
             const cidade = document.getElementById('cidade').value;
             const limite = document.getElementById('limite').value;
+            const modeloIA = document.getElementById('modeloIA').value;
 
             // Limpar resultados anteriores
             resultadosAtuais = [];
@@ -359,7 +372,8 @@
                 body: JSON.stringify({
                     tipoEstabelecimento,
                     cidade,
-                    limite: limite || null
+                    limite: limite || null,
+                    modeloIA
                 })
             });
 

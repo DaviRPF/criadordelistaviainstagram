@@ -74,13 +74,14 @@ app.get('/api/verificar-login', (req, res) => {
 
 // Rota para iniciar o scraping com SSE (Server-Sent Events)
 app.post('/api/iniciar-prospeccao', async (req, res) => {
-  const { tipoEstabelecimento, cidade, limite } = req.body;
+  const { tipoEstabelecimento, cidade, limite, modeloIA } = req.body;
 
   console.log('');
   console.log('📊 Nova requisição de prospecção recebida:');
   console.log('  Tipo de Estabelecimento:', tipoEstabelecimento);
   console.log('  Cidade:', cidade);
   console.log('  Limite:', limite || 'Sem limite');
+  console.log('  Modelo IA:', modeloIA);
   console.log('');
 
   // Configurar SSE
@@ -98,6 +99,7 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
       cidade,
       limite: limite ? parseInt(limite) : undefined,
       geminiApiKey: process.env.GEMINI_API_KEY!,
+      geminiModel: modeloIA || 'gemini-2.0-flash-exp',
       twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
       instagramAuth,
       onProgresso: (resultado, atual, total) => {

@@ -8,6 +8,7 @@ interface ProspectorConfig {
   cidade: string;
   limite?: number;
   geminiApiKey: string;
+  geminiModel: string;
   twoCaptchaApiKey: string;
   instagramAuth: InstagramAuth;
   onProgresso?: (resultado: Resultado, atual: number, total: number | string) => void;
@@ -306,7 +307,7 @@ export class ProspectorScraper {
 
     // Usar IA para validar o título
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
       const prompt = `Analise o seguinte título de resultado do Google e URL:
 
@@ -470,7 +471,7 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
     console.log('     🤖 Usando IA para extrair contato da bio...');
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
       const prompt = `Analise a seguinte bio do Instagram e identifique se há número de telefone ou link do WhatsApp:
 
@@ -499,7 +500,7 @@ Se encontrar algum contato, retorne APENAS o número ou link. Se não encontrar,
     console.log('     🔗 Usando IA para extrair links da bio...');
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
       const prompt = `Analise a seguinte bio do Instagram e identifique se há:
 1. Link do Linktree (linktr.ee ou beacons.ai ou outros serviços similares de link in bio)
@@ -567,7 +568,7 @@ Se não encontrar algum dos links, use null.`;
       // Usar IA para identificar link do WhatsApp
       console.log('     🤖 Usando IA para identificar link do WhatsApp...');
 
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
       const linksTexto = links.map((link, index) =>
         `${index + 1}. Texto: "${link.text}" | URL: ${link.href}`
@@ -637,7 +638,7 @@ Se não encontrar nenhum link do WhatsApp, retorne encontrou: false.`;
     console.log('     🤖 Usando IA para identificar nome real...');
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
       const prompt = `Você receberá dois textos sobre um estabelecimento do Instagram:
 
@@ -754,7 +755,7 @@ RESPOSTA (apenas o nome):`;
     console.log(`  🤖 Usando IA para identificar resultado correto do ${fonte}...`);
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
       const listaResultados = resultados.map((r, i) =>
         `${i + 1}. Título: "${r.titulo}" | URL: ${r.url}`
@@ -820,7 +821,7 @@ RESPOSTA (apenas o número ou NENHUM):`;
       console.log('  🤖 Usando IA para extrair dados da página...');
 
       // Usar IA para extrair os dados
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
       const prompt = `Analise o seguinte texto extraído de uma página do Econodata sobre uma empresa e extraia as seguintes informações:
 
@@ -900,7 +901,7 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
       console.log('  🤖 Usando IA para extrair dados da página...');
 
       // Usar IA para extrair os dados
-      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
       const prompt = `Analise o seguinte texto extraído de uma página do CNPJBiz sobre uma empresa e extraia as seguintes informações:
 
