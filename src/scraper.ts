@@ -89,6 +89,39 @@ export class ProspectorScraper {
     }
   }
 
+  // Função auxiliar para chamar IA com retry e backoff exponencial
+  private async chamarIAComRetry(prompt: string, maxTentativas: number = 5): Promise<string> {
+    const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
+
+    for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+      try {
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim();
+      } catch (error: any) {
+        const mensagemErro = error.message || String(error);
+
+        // Verificar se é erro de rate limit (429)
+        if (mensagemErro.includes('429') || mensagemErro.includes('Too Many Requests') || mensagemErro.includes('quota')) {
+          if (tentativa < maxTentativas) {
+            // Backoff exponencial: 2s, 4s, 8s, 16s
+            const tempoEspera = Math.pow(2, tentativa) * 1000;
+            console.log(`     ⏳ Rate limit atingido. Aguardando ${tempoEspera/1000}s antes de tentar novamente (tentativa ${tentativa}/${maxTentativas})...`);
+            await new Promise(resolve => setTimeout(resolve, tempoEspera));
+            continue;
+          } else {
+            console.log(`     ❌ Rate limit após ${maxTentativas} tentativas`);
+            throw error;
+          }
+        }
+
+        // Outros erros, não tentar novamente
+        throw error;
+      }
+    }
+
+    throw new Error('Número máximo de tentativas excedido');
+  }
+
   async executar(): Promise<Resultado[]> {
     try {
       console.log('');
@@ -402,8 +435,6 @@ export class ProspectorScraper {
 
     // Usar IA para validar o título
     try {
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const prompt = `Analise o seguinte título de resultado do Google e URL:
 
 Título: "${titulo}"
@@ -411,12 +442,12 @@ URL: "${url}"
 
 Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
 
-      const result = await model.generateContent(prompt);
-      const resposta = result.response.text().trim().toUpperCase();
+      const resposta = await this.chamarIAComRetry(prompt);
+      const respostaUpper = resposta.toUpperCase();
 
-      console.log(`     🤖 IA respondeu: ${resposta}`);
+      console.log(`     🤖 IA respondeu: ${respostaUpper}`);
 
-      return resposta.includes('SIM');
+      return respostaUpper.includes('SIM');
     } catch (error: any) {
       console.error('     ⚠️  Erro na IA, usando verificação simples:', error.message);
       return url.includes('instagram');
@@ -578,16 +609,13 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
     console.log('     🤖 Usando IA para extrair contato da bio...');
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const prompt = `Analise a seguinte bio do Instagram e identifique se há número de telefone ou link do WhatsApp:
 
 Bio: "${bio}"
 
 Se encontrar algum contato, retorne APENAS o número ou link. Se não encontrar, retorne "NENHUM".`;
 
-      const result = await model.generateContent(prompt);
-      const resposta = result.response.text().trim();
+      const resposta = await this.chamarIAComRetry(prompt);
 
       console.log(`     🤖 IA encontrou: ${resposta}`);
 
@@ -607,8 +635,6 @@ Se encontrar algum contato, retorne APENAS o número ou link. Se não encontrar,
     console.log('     🔗 Usando IA para extrair links da bio...');
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const prompt = `Analise a seguinte bio do Instagram e identifique se há:
 1. Link do Linktree (linktr.ee ou beacons.ai ou outros serviços similares de link in bio)
 2. Site próprio (qualquer outro link que seja um site próprio da empresa)
@@ -623,8 +649,7 @@ Responda EXATAMENTE neste formato JSON:
 
 Se não encontrar algum dos links, use null.`;
 
-      const result = await model.generateContent(prompt);
-      const resposta = result.response.text().trim();
+      const resposta = await this.chamarIAComRetry(prompt);
 
       console.log(`     🤖 IA respondeu: ${resposta}`);
 
@@ -687,8 +712,6 @@ Se não encontrar algum dos links, use null.`;
       // Usar IA para identificar link do WhatsApp e site próprio
       console.log('     🤖 Usando IA para identificar WhatsApp e site próprio...');
 
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const linksTexto = links.map((link, index) =>
         `${index + 1}. Texto: "${link.text}" | URL: ${link.href}`
       ).join('\n');
@@ -724,8 +747,7 @@ Responda EXATAMENTE neste formato JSON:
 
 Se não encontrar, use encontrou: false.`;
 
-      const result = await model.generateContent(prompt);
-      const resposta = result.response.text().trim();
+      const resposta = await this.chamarIAComRetry(prompt);
 
       console.log('     🤖 IA respondeu:', resposta.substring(0, 150));
 
@@ -779,8 +801,6 @@ Se não encontrar, use encontrou: false.`;
     console.log('     🤖 Usando IA para identificar nome real...');
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const prompt = `Você receberá dois textos sobre um estabelecimento do Instagram:
 
 Texto 1: "${nome}"
@@ -798,8 +818,7 @@ Exemplo:
 
 RESPOSTA (apenas o nome):`;
 
-      const result = await model.generateContent(prompt);
-      let nomeReal = result.response.text().trim();
+      let nomeReal = await this.chamarIAComRetry(prompt);
 
       // Limpar qualquer texto extra que a IA possa ter adicionado
       nomeReal = nomeReal.split('\n')[0]; // Pegar só a primeira linha
@@ -896,8 +915,6 @@ RESPOSTA (apenas o nome):`;
     console.log(`  🤖 Usando IA para identificar resultado correto do ${fonte}...`);
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const listaResultados = resultados.map((r, i) =>
         `${i + 1}. Título: "${r.titulo}" | URL: ${r.url}`
       ).join('\n');
@@ -915,8 +932,7 @@ Critérios:
 
 RESPOSTA (apenas o número ou NENHUM):`;
 
-      const result = await model.generateContent(prompt);
-      let resposta = result.response.text().trim();
+      let resposta = await this.chamarIAComRetry(prompt);
 
       // Extrair apenas o primeiro número da resposta (caso a IA tenha dado explicações)
       const primeiraLinha = resposta.split('\n')[0].trim();
@@ -962,8 +978,6 @@ RESPOSTA (apenas o número ou NENHUM):`;
       console.log('  🤖 Usando IA para extrair dados da página...');
 
       // Usar IA para extrair os dados
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const prompt = `Analise o seguinte texto extraído de uma página do Econodata sobre uma empresa e extraia as seguintes informações:
 
 1. Situação da empresa (ex: ATIVA, INAPTA, BAIXADA, etc)
@@ -990,8 +1004,7 @@ Responda EXATAMENTE neste formato JSON:
 
 Se não encontrar alguma informação, use null ou [] para socios.`;
 
-      const result = await model.generateContent(prompt);
-      const resposta = result.response.text().trim();
+      const resposta = await this.chamarIAComRetry(prompt);
 
       console.log('  🤖 IA respondeu:', resposta.substring(0, 200));
 
@@ -1046,8 +1059,6 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
       console.log('  🤖 Usando IA para extrair dados da página...');
 
       // Usar IA para extrair os dados
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const prompt = `Analise o seguinte texto extraído de uma página do CNPJBiz sobre uma empresa e extraia as seguintes informações:
 
 1. Situação da empresa (ex: ATIVA, INAPTA, BAIXADA, etc)
@@ -1074,8 +1085,7 @@ Responda EXATAMENTE neste formato JSON:
 
 Se não encontrar alguma informação, use null ou [] para socios.`;
 
-      const result = await model.generateContent(prompt);
-      const resposta = result.response.text().trim();
+      const resposta = await this.chamarIAComRetry(prompt);
 
       console.log('  🤖 IA respondeu:', resposta.substring(0, 200));
 
@@ -1139,8 +1149,6 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
       console.log('  🤖 Usando IA para identificar card do Google Meu Negócio...');
 
       // Usar IA para identificar e extrair dados do card GMB
-      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
-
       const prompt = `Analise o seguinte texto extraído de uma página de resultados do Google e identifique o card do Google Meu Negócio.
 
 O card do Google Meu Negócio é um elemento especial (não um resultado de pesquisa comum) que aparece geralmente à direita ou no topo da página, contendo informações detalhadas sobre o estabelecimento.
@@ -1166,8 +1174,7 @@ IMPORTANTE:
 - Para o horário, resuma de forma concisa (ex: "Seg-Sex 8h-18h, Sáb 8h-12h")
 - Se não encontrar telefone ou horário, use null`;
 
-      const result = await model.generateContent(prompt);
-      const resposta = result.response.text().trim();
+      const resposta = await this.chamarIAComRetry(prompt);
 
       console.log('  🤖 IA respondeu:', resposta.substring(0, 200));
 
