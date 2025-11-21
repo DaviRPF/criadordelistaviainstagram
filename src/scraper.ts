@@ -564,34 +564,64 @@ Se não encontrar algum dos links, use null.`;
 
       console.log(`     🔍 Encontrados ${links.length} links no Linktree`);
 
-      // Procurar link do WhatsApp
-      const whatsappLink = links.find(link =>
-        link.href.includes('wa.me') ||
-        link.href.includes('whatsapp.com') ||
-        link.href.includes('api.whatsapp.com') ||
-        link.text.toLowerCase().includes('whatsapp') ||
-        link.text.toLowerCase().includes('zap')
-      );
+      // Usar IA para identificar link do WhatsApp
+      console.log('     🤖 Usando IA para identificar link do WhatsApp...');
 
-      if (whatsappLink) {
-        console.log('     ✅ Link do WhatsApp encontrado:', whatsappLink.href);
+      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-        // Extrair número do link do WhatsApp
-        const numeroMatch = whatsappLink.href.match(/(\d{10,15})/);
-        const numero = numeroMatch ? numeroMatch[1] : null;
+      const linksTexto = links.map((link, index) =>
+        `${index + 1}. Texto: "${link.text}" | URL: ${link.href}`
+      ).join('\n');
 
-        if (numero) {
-          console.log('     📱 Número extraído:', numero);
+      const prompt = `Analise a seguinte lista de links extraídos de uma página Linktree e identifique qual é o link do WhatsApp:
+
+${linksTexto}
+
+Procure por:
+- Links que contenham wa.me, whatsapp.com, api.whatsapp.com
+- Links com texto que mencione WhatsApp, Zap, contato
+- Números de telefone em links
+
+Responda EXATAMENTE neste formato JSON:
+{
+  "encontrou": true ou false,
+  "indice": número do item (1, 2, 3...) ou null,
+  "link": "URL_COMPLETA" ou null,
+  "numero": "NUMERO_TELEFONE_EXTRAIDO" ou null
+}
+
+Se não encontrar nenhum link do WhatsApp, retorne encontrou: false.`;
+
+      const result = await model.generateContent(prompt);
+      const resposta = result.response.text().trim();
+
+      console.log('     🤖 IA respondeu:', resposta.substring(0, 150));
+
+      // Extrair JSON da resposta
+      const jsonMatch = resposta.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.log('     ⚠️  IA não retornou JSON válido');
+        await page.close();
+        return { whatsappLink: null, numeroWhatsapp: null };
+      }
+
+      const dados = JSON.parse(jsonMatch[0]);
+
+      if (dados.encontrou && dados.link) {
+        console.log('     ✅ Link do WhatsApp encontrado pela IA:', dados.link);
+
+        if (dados.numero) {
+          console.log('     📱 Número extraído pela IA:', dados.numero);
         }
 
         await page.close();
         return {
-          whatsappLink: whatsappLink.href,
-          numeroWhatsapp: numero
+          whatsappLink: dados.link,
+          numeroWhatsapp: dados.numero || null
         };
       }
 
-      console.log('     ⚠️  Nenhum link do WhatsApp encontrado no Linktree');
+      console.log('     ⚠️  IA não encontrou link do WhatsApp no Linktree');
       await page.close();
       return { whatsappLink: null, numeroWhatsapp: null };
 
