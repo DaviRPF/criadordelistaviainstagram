@@ -328,21 +328,52 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
     const page = await this.browser.newPage();
 
     try {
+      // Setar user agent para parecer navegador real
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       console.log('✅ Perfil carregado');
 
       // Esperar o conteúdo carregar
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(3000);
 
-      // Extrair dados do perfil
+      // Verificar se está na página de login
+      const estaNoLogin = await page.evaluate(() => {
+        return window.location.pathname.includes('/accounts/login') ||
+               document.body.innerText.includes('Log in to Instagram') ||
+               document.body.innerText.includes('accountslogin');
+      });
+
+      if (estaNoLogin) {
+        console.log('⚠️  Instagram redirecionou para login, pulando este perfil...');
+        await page.close();
+        return;
+      }
+
+      // Extrair dados do perfil com múltiplos seletores
       const dadosPerfil = await page.evaluate(() => {
-        const nome = document.querySelector('header h2')?.textContent ||
-                     document.querySelector('header h1')?.textContent || '';
+        // Tentar múltiplos seletores para nome
+        const nome =
+          document.querySelector('header section h2')?.textContent ||
+          document.querySelector('header h2')?.textContent ||
+          document.querySelector('header h1')?.textContent ||
+          document.querySelector('h2._aacl._aacs._aact._aacx._aada')?.textContent ||
+          document.querySelector('span.x1lliihq.x1plvlek.xryxfnj')?.textContent ||
+          '';
 
-        const username = window.location.pathname.replace(/\//g, '') || '';
+        // Username da URL é mais confiável
+        const username = window.location.pathname.split('/').filter(Boolean)[0] || '';
 
-        const bio = document.querySelector('header div._aa_c span')?.textContent ||
-                    document.querySelector('div.-vDIg span')?.textContent || '';
+        // Tentar múltiplos seletores para bio
+        const bio =
+          document.querySelector('header section div._aa_c span')?.textContent ||
+          document.querySelector('header div._aa_c span')?.textContent ||
+          document.querySelector('div.-vDIg span')?.textContent ||
+          document.querySelector('h1 + div')?.textContent ||
+          Array.from(document.querySelectorAll('span')).find(el =>
+            el.textContent && el.textContent.length > 20 && el.textContent.length < 200
+          )?.textContent ||
+          '';
 
         return { nome, username, bio };
       });
@@ -352,6 +383,13 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
       console.log('     Username:', dadosPerfil.username);
       console.log('     Bio:', dadosPerfil.bio.substring(0, 100) + '...');
 
+      // Se não conseguiu pegar o username, pular
+      if (!dadosPerfil.username || dadosPerfil.username === 'accountslogin') {
+        console.log('⚠️  Username inválido, pulando perfil...');
+        await page.close();
+        return;
+      }
+
       // Verificar contato na bio usando IA
       const contato = await this.extrairContatoDaBio(dadosPerfil.bio);
       if (contato) {
@@ -359,7 +397,9 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
       }
 
       // Identificar nome real do estabelecimento
-      const nomeReal = await this.identificarNomeReal(dadosPerfil.nome, dadosPerfil.username);
+      // Se nome estiver vazio, usar o username
+      const nomeParaIA = dadosPerfil.nome || dadosPerfil.username;
+      const nomeReal = await this.identificarNomeReal(nomeParaIA, dadosPerfil.username);
       console.log('     🏢 Nome real identificado:', nomeReal);
 
       // Buscar dados de CNPJ
@@ -419,15 +459,36 @@ Se encontrar algum contato, retorne APENAS o número ou link. Se não encontrar,
     try {
       const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-      const prompt = `Entre os dois nomes abaixo, identifique qual é o nome real de um estabelecimento comercial (não o username):
+      const prompt = `Você receberá dois textos sobre um estabelecimento do Instagram:
 
-Nome 1: "${nome}"
-Nome 2: "${username}"
+Texto 1: "${nome}"
+Texto 2: "${username}"
 
-Retorne APENAS o nome real do estabelecimento, formatado de forma legível (sem underscores, primeira letra maiúscula, etc).`;
+REGRAS:
+1. Se o Texto 1 tiver conteúdo válido (não vazio), use-o como base para o nome
+2. Se o Texto 1 estiver vazio, use o Texto 2
+3. Formate o nome de forma legível: remova underscores, capitalize palavras
+4. Retorne APENAS o nome formatado, sem explicações
+
+Exemplo:
+- "loucosporpizza" → "Loucos Por Pizza"
+- "pizzaria_da_vila" → "Pizzaria da Vila"
+
+RESPOSTA (apenas o nome):`;
 
       const result = await model.generateContent(prompt);
-      const nomeReal = result.response.text().trim();
+      let nomeReal = result.response.text().trim();
+
+      // Limpar qualquer texto extra que a IA possa ter adicionado
+      nomeReal = nomeReal.split('\n')[0]; // Pegar só a primeira linha
+      nomeReal = nomeReal.replace(/^[*-]\s*/, ''); // Remover bullet points
+      nomeReal = nomeReal.replace(/["'`]/g, ''); // Remover aspas
+
+      // Se a resposta for muito longa (>100 caracteres), provavelmente está errada
+      if (nomeReal.length > 100) {
+        console.log(`     ⚠️  Resposta da IA muito longa, usando fallback`);
+        nomeReal = nome || username;
+      }
 
       console.log(`     🤖 IA identificou: ${nomeReal}`);
 
@@ -523,20 +584,33 @@ Retorne APENAS o nome real do estabelecimento, formatado de forma legível (sem 
 
 ${listaResultados}
 
-Retorne APENAS o número do resultado correto (1, 2, 3...) ou "NENHUM" se nenhum for adequado.`;
+IMPORTANTE: Retorne APENAS um número (1, 2, 3...) ou a palavra "NENHUM". Nada mais.
+
+Critérios:
+1. O URL deve ser do site ${fonte}
+2. O título deve mencionar o estabelecimento e/ou a cidade
+3. Se nenhum resultado atender, retorne "NENHUM"
+
+RESPOSTA (apenas o número ou NENHUM):`;
 
       const result = await model.generateContent(prompt);
-      const resposta = result.response.text().trim();
+      let resposta = result.response.text().trim();
 
-      console.log(`  🤖 IA escolheu: ${resposta}`);
+      // Extrair apenas o primeiro número da resposta (caso a IA tenha dado explicações)
+      const primeiraLinha = resposta.split('\n')[0].trim();
+      const numeroMatch = primeiraLinha.match(/\d+/);
 
-      if (resposta === 'NENHUM' || resposta.includes('NENHUM')) {
+      console.log(`  🤖 IA escolheu: ${primeiraLinha}`);
+
+      if (primeiraLinha.toUpperCase().includes('NENHUM')) {
         return null;
       }
 
-      const numero = parseInt(resposta);
-      if (numero > 0 && numero <= resultados.length) {
-        return resultados[numero - 1].url;
+      if (numeroMatch) {
+        const numero = parseInt(numeroMatch[0]);
+        if (numero > 0 && numero <= resultados.length) {
+          return resultados[numero - 1].url;
+        }
       }
 
       return null;
