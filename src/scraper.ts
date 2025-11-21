@@ -2,6 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Solver } from '@2captcha/captcha-solver';
 import { InstagramAuth } from './instagram-auth';
+import { CacheManager } from './cache-manager';
 
 interface ProspectorConfig {
   tipoEstabelecimento: string;
@@ -11,7 +12,9 @@ interface ProspectorConfig {
   geminiModel: string;
   twoCaptchaApiKey: string;
   instagramAuth: InstagramAuth;
+  pularProcessadas?: boolean;
   onProgresso?: (resultado: Resultado, atual: number, total: number | string) => void;
+  onEstatisticas?: (puladas: number, novas: number) => void;
 }
 
 interface Resultado {
@@ -41,17 +44,23 @@ export class ProspectorScraper {
   private gemini: GoogleGenerativeAI;
   private solver: any;
   private resultados: Resultado[] = [];
+  private cache: CacheManager;
+  private empresasPuladas: number = 0;
+  private empresasNovas: number = 0;
 
   constructor(config: ProspectorConfig) {
     this.config = config;
     this.gemini = new GoogleGenerativeAI(config.geminiApiKey);
     this.solver = new Solver(config.twoCaptchaApiKey);
+    this.cache = new CacheManager();
 
     console.log('🔧 Configuração do Scraper:');
     console.log('  API Keys carregadas:', {
       gemini: config.geminiApiKey ? '✅' : '❌',
       twoCaptcha: config.twoCaptchaApiKey ? '✅' : '❌'
     });
+    console.log('  Pular processadas:', config.pularProcessadas ? '✅' : '❌');
+    console.log('  Empresas no cache:', this.cache.getTotal());
   }
 
   // Função auxiliar para normalizar URLs (adicionar https:// se necessário)
@@ -69,6 +78,17 @@ export class ProspectorScraper {
     return 'https://' + urlTrimmed;
   }
 
+  // Extrair username da URL do Instagram (SEM IA, ultra rápido)
+  private extrairUsernameUrl(url: string): string | null {
+    try {
+      // Exemplo: https://www.instagram.com/pizzariadavila/ → pizzariadavila
+      const match = url.match(/instagram\.com\/([^\/\?]+)/);
+      return match ? match[1] : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   async executar(): Promise<Resultado[]> {
     try {
       console.log('');
@@ -79,9 +99,15 @@ export class ProspectorScraper {
       await this.buscarNoGoogle();
       await this.fecharBrowser();
 
+      // Salvar cache
+      this.cache.salvar();
+
       console.log('');
       console.log('✅ Scraper finalizado com sucesso!');
       console.log(`📊 Total de resultados: ${this.resultados.length}`);
+      console.log(`📊 Estatísticas:`);
+      console.log(`   ✅ Novas: ${this.empresasNovas}`);
+      console.log(`   ⏭️  Puladas: ${this.empresasPuladas}`);
       console.log('====================================');
 
       return this.resultados;
@@ -89,8 +115,24 @@ export class ProspectorScraper {
     } catch (error: any) {
       console.error('❌ Erro fatal no scraper:', error.message);
       await this.fecharBrowser();
+      // Salvar cache mesmo em caso de erro
+      this.cache.salvar();
       throw error;
     }
+  }
+
+  // Método público para importar usernames de CSVs/JSONs antigos
+  importarCache(usernames: string[]): number {
+    return this.cache.importar(usernames);
+  }
+
+  // Método público para obter estatísticas do cache
+  getEstatisticasCache() {
+    return {
+      total: this.cache.getTotal(),
+      puladas: this.empresasPuladas,
+      novas: this.empresasNovas
+    };
   }
 
   private async iniciarBrowser(): Promise<void> {
@@ -274,18 +316,52 @@ export class ProspectorScraper {
         const ehInstagram = await this.verificarSeEhInstagram(link.titulo, link.url);
 
         if (ehInstagram) {
-          console.log('     ✅ É do Instagram! Processando...');
+          console.log('     ✅ É do Instagram!');
+
+          // Extrair username da URL (ULTRA RÁPIDO, SEM IA)
+          const username = this.extrairUsernameUrl(link.url);
+
+          if (!username) {
+            console.log('     ⚠️  Não foi possível extrair username, pulando...');
+            continue;
+          }
+
+          // Verificar se já foi processado (se a opção estiver ativa)
+          if (this.config.pularProcessadas && this.cache.jaProcessado(username)) {
+            console.log(`     ⏭️  @${username} já processado anteriormente, pulando...`);
+            this.empresasPuladas++;
+
+            // Enviar estatísticas
+            if (this.config.onEstatisticas) {
+              this.config.onEstatisticas(this.empresasPuladas, this.empresasNovas);
+            }
+
+            temMaisInstagram = true; // Ainda tem Instagram, só pulamos
+            continue;
+          }
+
+          console.log('     🆕 Processando...');
 
           try {
             contadorResultados++;
+            this.empresasNovas++;
             const total = this.config.limite || '?';
             await this.processarPerfilInstagram(link.url, contadorResultados, total);
             temMaisInstagram = true;
+
+            // Adicionar ao cache após processar com sucesso
+            this.cache.adicionar(username);
+
+            // Enviar estatísticas
+            if (this.config.onEstatisticas) {
+              this.config.onEstatisticas(this.empresasPuladas, this.empresasNovas);
+            }
 
             // Verificar limite
             if (this.config.limite && contadorResultados >= this.config.limite) {
               console.log('');
               console.log(`🎯 Limite de ${this.config.limite} resultados atingido!`);
+              this.cache.salvar(); // Salvar cache antes de sair
               return;
             }
           } catch (error: any) {

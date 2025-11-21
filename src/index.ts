@@ -72,9 +72,50 @@ app.get('/api/verificar-login', (req, res) => {
   });
 });
 
+// Rota para importar cache de CSV/JSON
+app.post('/api/importar-cache', async (req, res) => {
+  try {
+    const { usernames } = req.body;
+
+    if (!usernames || !Array.isArray(usernames)) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Formato inválido. Envie um array de usernames.'
+      });
+    }
+
+    // Criar scraper temporário só para importar
+    const scraper = new ProspectorScraper({
+      tipoEstabelecimento: '',
+      cidade: '',
+      geminiApiKey: process.env.GEMINI_API_KEY!,
+      geminiModel: 'gemini-2.5-flash-preview-05',
+      twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
+      instagramAuth
+    });
+
+    const novos = scraper.importarCache(usernames);
+
+    console.log(`📥 Cache importado: ${novos} novos usernames`);
+
+    res.json({
+      sucesso: true,
+      novos,
+      total: scraper.getEstatisticasCache().total
+    });
+
+  } catch (error: any) {
+    console.error('❌ Erro ao importar cache:', error.message);
+    res.status(500).json({
+      sucesso: false,
+      erro: error.message
+    });
+  }
+});
+
 // Rota para iniciar o scraping com SSE (Server-Sent Events)
 app.post('/api/iniciar-prospeccao', async (req, res) => {
-  const { tipoEstabelecimento, cidade, limite, modeloIA } = req.body;
+  const { tipoEstabelecimento, cidade, limite, modeloIA, pularProcessadas } = req.body;
 
   console.log('');
   console.log('📊 Nova requisição de prospecção recebida:');
@@ -82,6 +123,7 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
   console.log('  Cidade:', cidade);
   console.log('  Limite:', limite || 'Sem limite');
   console.log('  Modelo IA:', modeloIA);
+  console.log('  Pular Processadas:', pularProcessadas ? 'Sim' : 'Não');
   console.log('');
 
   // Configurar SSE
@@ -102,8 +144,12 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
       geminiModel: modeloIA || 'gemini-2.5-flash-preview-05',
       twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
       instagramAuth,
+      pularProcessadas: pularProcessadas === true,
       onProgresso: (resultado, atual, total) => {
         enviarEvento('progresso', { resultado, atual, total });
+      },
+      onEstatisticas: (puladas, novas) => {
+        enviarEvento('estatisticas', { puladas, novas });
       }
     });
 

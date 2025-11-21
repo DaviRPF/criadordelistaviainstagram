@@ -423,6 +423,25 @@
                     <p class="small-text">Escolha o modelo de IA que será usado para análise de dados</p>
                 </div>
 
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="pularProcessadas" checked>
+                        ⚡ Pular empresas já processadas
+                    </label>
+                    <p class="small-text">Economiza tempo pulando perfis que já foram exportados anteriormente</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="cacheUpload">📥 Importar exports antigos (CSV/JSON)</label>
+                    <input
+                        type="file"
+                        id="cacheUpload"
+                        accept=".csv,.json"
+                        style="padding: 8px;"
+                    >
+                    <p class="small-text" id="cacheStatus">Nenhum arquivo importado</p>
+                </div>
+
                 <button type="submit" id="btnIniciar">🚀 Iniciar Prospecção</button>
             </form>
 
@@ -500,6 +519,61 @@
         verificarLogin();
 
         let resultadosAtuais = [];
+        let estatisticas = { puladas: 0, novas: 0 };
+
+        // Upload de cache
+        document.getElementById('cacheUpload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById('cacheStatus');
+            statusEl.textContent = '⏳ Processando arquivo...';
+
+            try {
+                const text = await file.text();
+                let usernames = [];
+
+                // Processar CSV
+                if (file.name.endsWith('.csv')) {
+                    const lines = text.split('\n');
+                    // Assumir que username está na coluna 3 (índice 2)
+                    for (let i = 1; i < lines.length; i++) { // Pular cabeçalho
+                        const cols = lines[i].split(',');
+                        if (cols.length >= 3 && cols[2]) {
+                            // Remover @ e aspas
+                            const username = cols[2].replace(/[@"]/g, '').trim();
+                            if (username) usernames.push(username);
+                        }
+                    }
+                }
+                // Processar JSON
+                else if (file.name.endsWith('.json')) {
+                    const data = JSON.parse(text);
+                    if (Array.isArray(data)) {
+                        usernames = data.map(item => item.username).filter(Boolean);
+                    }
+                }
+
+                // Enviar para API
+                const response = await fetch('/api/importar-cache', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usernames })
+                });
+
+                const result = await response.json();
+
+                if (result.sucesso) {
+                    statusEl.textContent = `✅ Importados ${result.novos} novos usernames (total: ${result.total})`;
+                } else {
+                    statusEl.textContent = '❌ Erro ao importar: ' + result.erro;
+                }
+
+            } catch (error) {
+                console.error('Erro ao processar arquivo:', error);
+                statusEl.textContent = '❌ Erro ao processar arquivo';
+            }
+        });
 
         document.getElementById('prospectorForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -508,9 +582,11 @@
             const cidade = document.getElementById('cidade').value;
             const limite = document.getElementById('limite').value;
             const modeloIA = document.getElementById('modeloIA').value;
+            const pularProcessadas = document.getElementById('pularProcessadas').checked;
 
             // Limpar resultados anteriores
             resultadosAtuais = [];
+            estatisticas = { puladas: 0, novas: 0 };
 
             // Mostrar loading e resultados vazios
             document.getElementById('loading').classList.add('show');
@@ -529,7 +605,8 @@
                     tipoEstabelecimento,
                     cidade,
                     limite: limite || null,
-                    modeloIA
+                    modeloIA,
+                    pularProcessadas
                 })
             });
 
@@ -560,6 +637,16 @@
 
                                 // Atualizar resultados em tempo real
                                 mostrarResultadosProgressivo(resultadosAtuais, atual, total);
+
+                            } else if (data.tipo === 'estatisticas') {
+                                const { puladas, novas } = data.dados;
+                                estatisticas = { puladas, novas };
+
+                                // Atualizar mensagem de loading com estatísticas
+                                if (puladas > 0 || novas > 0) {
+                                    document.getElementById('loading').querySelector('p:first-of-type').innerHTML =
+                                        `<strong>Processando... (✅ ${novas} novas | ⏭️ ${puladas} puladas)</strong>`;
+                                }
 
                             } else if (data.tipo === 'concluido') {
                                 // Esconder loading
