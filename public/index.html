@@ -454,11 +454,13 @@
                             <th>Contato Bio</th>
                             <th>Linktree</th>
                             <th>WhatsApp Linktree</th>
-                            <th>Site Próprio</th>
+                            <th>Site Próprio Bio</th>
+                            <th>Site Próprio Linktree</th>
                             <th>Situação</th>
                             <th>Ativa Desde</th>
                             <th>Tipo Unidade</th>
                             <th>Porte</th>
+                            <th>Capital Social</th>
                             <th>Sócios/Admin</th>
                             <th>CNPJ Info</th>
                         </tr>
@@ -488,11 +490,13 @@
                         <td>${resultado.contato ? `<span class="badge">📱 ${resultado.contato}</span>` : '-'}</td>
                         <td>${resultado.linkTree ? `<a href="${resultado.linkTree}" target="_blank">🌳 Linktree</a>` : '-'}</td>
                         <td>${whatsappLinktree}</td>
-                        <td>${resultado.siteProprio ? `<a href="${resultado.siteProprio}" target="_blank">🌐 Site</a>` : '-'}</td>
+                        <td>${resultado.siteProprio ? `<a href="${resultado.siteProprio}" target="_blank">🌐 Bio</a>` : '-'}</td>
+                        <td>${resultado.siteProprioLinktree ? `<a href="${resultado.siteProprioLinktree}" target="_blank">🌐 Linktree</a>` : '-'}</td>
                         <td>${resultado.situacao || '-'}</td>
                         <td>${resultado.ativaDesde || '-'}</td>
                         <td>${resultado.tipoUnidade || '-'}</td>
                         <td>${resultado.enquadramentoPorte || '-'}</td>
+                        <td>${resultado.capitalSocial || '-'}</td>
                         <td>${socios}</td>
                         <td>${resultado.cnpjUrl ? `<a href="${resultado.cnpjUrl}" target="_blank">Ver dados</a>` : '-'}</td>
                     </tr>

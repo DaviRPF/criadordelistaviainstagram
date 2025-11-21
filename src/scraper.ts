@@ -21,6 +21,7 @@ interface Resultado {
   contato?: string;
   linkTree?: string;
   siteProprio?: string;
+  siteProprioLinktree?: string;
   whatsappLinkTree?: string;
   numeroWhatsappLinkTree?: string;
   cnpjUrl?: string;
@@ -28,6 +29,7 @@ interface Resultado {
   ativaDesde?: string;
   tipoUnidade?: string;
   enquadramentoPorte?: string;
+  capitalSocial?: string;
   sociosAdministradores?: string[];
 }
 
@@ -414,18 +416,20 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
 
       let whatsappLinkTree: string | undefined = undefined;
       let numeroWhatsappLinkTree: string | undefined = undefined;
+      let siteProprioLinktree: string | undefined = undefined;
 
       if (linkTree) {
         console.log('     🌳 Linktree encontrado:', linkTree);
 
-        // Processar Linktree para buscar WhatsApp
+        // Processar Linktree para buscar WhatsApp e Site Próprio
         const dadosLinktree = await this.processarLinktree(linkTree);
         whatsappLinkTree = dadosLinktree.whatsappLink || undefined;
         numeroWhatsappLinkTree = dadosLinktree.numeroWhatsapp || undefined;
+        siteProprioLinktree = dadosLinktree.siteProprio || undefined;
       }
 
       if (siteProprio) {
-        console.log('     🌐 Site próprio encontrado:', siteProprio);
+        console.log('     🌐 Site próprio da bio encontrado:', siteProprio);
       }
 
       // Identificar nome real do estabelecimento
@@ -445,6 +449,7 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         contato: contato || undefined,
         linkTree: linkTree || undefined,
         siteProprio: siteProprio || undefined,
+        siteProprioLinktree: siteProprioLinktree,
         whatsappLinkTree: whatsappLinkTree,
         numeroWhatsappLinkTree: numeroWhatsappLinkTree,
         ...dadosCnpj
@@ -538,8 +543,8 @@ Se não encontrar algum dos links, use null.`;
     }
   }
 
-  private async processarLinktree(linktreeUrl: string): Promise<{ whatsappLink: string | null, numeroWhatsapp: string | null }> {
-    if (!this.browser) return { whatsappLink: null, numeroWhatsapp: null };
+  private async processarLinktree(linktreeUrl: string): Promise<{ whatsappLink: string | null, numeroWhatsapp: string | null, siteProprio: string | null }> {
+    if (!this.browser) return { whatsappLink: null, numeroWhatsapp: null, siteProprio: null };
 
     console.log('');
     console.log('     🌳 Processando Linktree...');
@@ -565,8 +570,8 @@ Se não encontrar algum dos links, use null.`;
 
       console.log(`     🔍 Encontrados ${links.length} links no Linktree`);
 
-      // Usar IA para identificar link do WhatsApp
-      console.log('     🤖 Usando IA para identificar link do WhatsApp...');
+      // Usar IA para identificar link do WhatsApp e site próprio
+      console.log('     🤖 Usando IA para identificar WhatsApp e site próprio...');
 
       const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
 
@@ -574,24 +579,36 @@ Se não encontrar algum dos links, use null.`;
         `${index + 1}. Texto: "${link.text}" | URL: ${link.href}`
       ).join('\n');
 
-      const prompt = `Analise a seguinte lista de links extraídos de uma página Linktree e identifique qual é o link do WhatsApp:
+      const prompt = `Analise a seguinte lista de links extraídos de uma página Linktree e identifique:
+1. Qual é o link do WhatsApp
+2. Qual é o site próprio da empresa (não considere redes sociais, apenas sites próprios)
 
 ${linksTexto}
 
-Procure por:
+Para WhatsApp, procure por:
 - Links que contenham wa.me, whatsapp.com, api.whatsapp.com
 - Links com texto que mencione WhatsApp, Zap, contato
 - Números de telefone em links
 
+Para Site Próprio, procure por:
+- Links que levem para domínios próprios (não redes sociais como Instagram, Facebook, etc)
+- Links com texto tipo "Site", "Website", "Loja Online", "Nossa Loja", etc
+- URLs que não sejam de redes sociais conhecidas
+
 Responda EXATAMENTE neste formato JSON:
 {
-  "encontrou": true ou false,
-  "indice": número do item (1, 2, 3...) ou null,
-  "link": "URL_COMPLETA" ou null,
-  "numero": "NUMERO_TELEFONE_EXTRAIDO" ou null
+  "whatsapp": {
+    "encontrou": true ou false,
+    "link": "URL_COMPLETA" ou null,
+    "numero": "NUMERO_TELEFONE_EXTRAIDO" ou null
+  },
+  "siteProprio": {
+    "encontrou": true ou false,
+    "link": "URL_COMPLETA" ou null
+  }
 }
 
-Se não encontrar nenhum link do WhatsApp, retorne encontrou: false.`;
+Se não encontrar, use encontrou: false.`;
 
       const result = await model.generateContent(prompt);
       const resposta = result.response.text().trim();
@@ -603,33 +620,43 @@ Se não encontrar nenhum link do WhatsApp, retorne encontrou: false.`;
       if (!jsonMatch) {
         console.log('     ⚠️  IA não retornou JSON válido');
         await page.close();
-        return { whatsappLink: null, numeroWhatsapp: null };
+        return { whatsappLink: null, numeroWhatsapp: null, siteProprio: null };
       }
 
       const dados = JSON.parse(jsonMatch[0]);
 
-      if (dados.encontrou && dados.link) {
-        console.log('     ✅ Link do WhatsApp encontrado pela IA:', dados.link);
+      let whatsappLink = null;
+      let numeroWhatsapp = null;
+      let siteProprio = null;
 
-        if (dados.numero) {
-          console.log('     📱 Número extraído pela IA:', dados.numero);
+      // Processar WhatsApp
+      if (dados.whatsapp?.encontrou && dados.whatsapp?.link) {
+        whatsappLink = dados.whatsapp.link;
+        numeroWhatsapp = dados.whatsapp.numero || null;
+
+        console.log('     ✅ Link do WhatsApp encontrado pela IA:', whatsappLink);
+        if (numeroWhatsapp) {
+          console.log('     📱 Número extraído pela IA:', numeroWhatsapp);
         }
-
-        await page.close();
-        return {
-          whatsappLink: dados.link,
-          numeroWhatsapp: dados.numero || null
-        };
+      } else {
+        console.log('     ⚠️  IA não encontrou link do WhatsApp no Linktree');
       }
 
-      console.log('     ⚠️  IA não encontrou link do WhatsApp no Linktree');
+      // Processar Site Próprio
+      if (dados.siteProprio?.encontrou && dados.siteProprio?.link) {
+        siteProprio = dados.siteProprio.link;
+        console.log('     ✅ Site próprio encontrado pela IA:', siteProprio);
+      } else {
+        console.log('     ⚠️  IA não encontrou site próprio no Linktree');
+      }
+
       await page.close();
-      return { whatsappLink: null, numeroWhatsapp: null };
+      return { whatsappLink, numeroWhatsapp, siteProprio };
 
     } catch (error: any) {
       console.error('     ❌ Erro ao processar Linktree:', error.message);
       await page.close();
-      return { whatsappLink: null, numeroWhatsapp: null };
+      return { whatsappLink: null, numeroWhatsapp: null, siteProprio: null };
     }
   }
 
@@ -829,7 +856,8 @@ RESPOSTA (apenas o número ou NENHUM):`;
 2. Data de abertura / Ativa desde (ex: 01/01/2020)
 3. Tipo de unidade (ex: MATRIZ, FILIAL)
 4. Enquadramento de porte (ex: ME, EPP, DEMAIS, MEI)
-5. Lista de sócios e administradores (nomes das pessoas)
+5. Capital Social (ex: R$ 10.000,00)
+6. Lista de sócios e administradores (nomes das pessoas)
 
 Texto da página:
 """
@@ -842,6 +870,7 @@ Responda EXATAMENTE neste formato JSON:
   "ativaDesde": "valor ou null",
   "tipoUnidade": "valor ou null",
   "enquadramentoPorte": "valor ou null",
+  "capitalSocial": "valor ou null",
   "socios": ["nome1", "nome2"] ou []
 }
 
@@ -865,6 +894,7 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
       console.log('     📅 Ativa desde:', dados.ativaDesde || 'N/A');
       console.log('     🏢 Tipo de unidade:', dados.tipoUnidade || 'N/A');
       console.log('     📊 Enquadramento de porte:', dados.enquadramentoPorte || 'N/A');
+      console.log('     💰 Capital Social:', dados.capitalSocial || 'N/A');
       console.log('     👥 Sócios/Administradores:', dados.socios && dados.socios.length > 0 ? dados.socios.join(', ') : 'N/A');
 
       return {
@@ -873,6 +903,7 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
         ativaDesde: dados.ativaDesde !== 'null' && dados.ativaDesde ? dados.ativaDesde : undefined,
         tipoUnidade: dados.tipoUnidade !== 'null' && dados.tipoUnidade ? dados.tipoUnidade : undefined,
         enquadramentoPorte: dados.enquadramentoPorte !== 'null' && dados.enquadramentoPorte ? dados.enquadramentoPorte : undefined,
+        capitalSocial: dados.capitalSocial !== 'null' && dados.capitalSocial ? dados.capitalSocial : undefined,
         sociosAdministradores: dados.socios && dados.socios.length > 0 ? dados.socios : []
       };
     } catch (error: any) {
@@ -909,7 +940,8 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
 2. Data de abertura / Ativa desde (ex: 01/01/2020)
 3. Tipo de unidade (ex: MATRIZ, FILIAL)
 4. Enquadramento de porte (ex: ME, EPP, DEMAIS, MEI)
-5. Lista de sócios e administradores (nomes das pessoas)
+5. Capital Social (ex: R$ 10.000,00)
+6. Lista de sócios e administradores (nomes das pessoas)
 
 Texto da página:
 """
@@ -922,6 +954,7 @@ Responda EXATAMENTE neste formato JSON:
   "ativaDesde": "valor ou null",
   "tipoUnidade": "valor ou null",
   "enquadramentoPorte": "valor ou null",
+  "capitalSocial": "valor ou null",
   "socios": ["nome1", "nome2"] ou []
 }
 
@@ -945,6 +978,7 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
       console.log('     📅 Ativa desde:', dados.ativaDesde || 'N/A');
       console.log('     🏢 Tipo de unidade:', dados.tipoUnidade || 'N/A');
       console.log('     📊 Enquadramento de porte:', dados.enquadramentoPorte || 'N/A');
+      console.log('     💰 Capital Social:', dados.capitalSocial || 'N/A');
       console.log('     👥 Sócios/Administradores:', dados.socios && dados.socios.length > 0 ? dados.socios.join(', ') : 'N/A');
 
       return {
@@ -953,6 +987,7 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
         ativaDesde: dados.ativaDesde !== 'null' && dados.ativaDesde ? dados.ativaDesde : undefined,
         tipoUnidade: dados.tipoUnidade !== 'null' && dados.tipoUnidade ? dados.tipoUnidade : undefined,
         enquadramentoPorte: dados.enquadramentoPorte !== 'null' && dados.enquadramentoPorte ? dados.enquadramentoPorte : undefined,
+        capitalSocial: dados.capitalSocial !== 'null' && dados.capitalSocial ? dados.capitalSocial : undefined,
         sociosAdministradores: dados.socios && dados.socios.length > 0 ? dados.socios : []
       };
     } catch (error: any) {
