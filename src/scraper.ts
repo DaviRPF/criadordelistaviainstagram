@@ -164,6 +164,62 @@ export class ProspectorScraper {
     }
   }
 
+  private async extrairResultadosGoogle(page: Page): Promise<{ titulo: string; url: string }[]> {
+    return await page.evaluate(() => {
+      const resultados: { titulo: string; url: string }[] = [];
+
+      // Tentar múltiplos seletores (Google muda frequentemente)
+      const seletoresPossiveis = [
+        'div.g',           // Seletor antigo
+        'div[data-sokoban-container]',  // Seletor mais recente
+        'div.Gx5Zad',      // Alternativo
+        '.MjjYud',         // Outro possível
+        'div[jscontroller]' // Genérico
+      ];
+
+      let elementos: NodeListOf<Element> | null = null;
+
+      for (const seletor of seletoresPossiveis) {
+        const els = document.querySelectorAll(seletor);
+        console.log(`Testando seletor "${seletor}": ${els.length} elementos`);
+        if (els.length > 0) {
+          elementos = els;
+          break;
+        }
+      }
+
+      if (!elementos || elementos.length === 0) {
+        // Tentar pegar todos os links com h3
+        const todosH3 = document.querySelectorAll('h3');
+        console.log(`Fallback: encontrados ${todosH3.length} elementos h3`);
+
+        todosH3.forEach((h3: Element) => {
+          const link = h3.closest('a') || h3.querySelector('a') || h3.parentElement?.querySelector('a');
+          if (link && link instanceof HTMLAnchorElement) {
+            resultados.push({
+              titulo: h3.textContent || '',
+              url: link.href
+            });
+          }
+        });
+      } else {
+        elementos.forEach((el: Element) => {
+          const link = el.querySelector('a');
+          const titulo = el.querySelector('h3');
+
+          if (link && titulo && link instanceof HTMLAnchorElement) {
+            resultados.push({
+              titulo: titulo.textContent || '',
+              url: link.href
+            });
+          }
+        });
+      }
+
+      return resultados;
+    });
+  }
+
   private async processarResultadosGoogle(page: Page): Promise<void> {
     console.log('');
     console.log('📄 Processando resultados da busca...');
@@ -176,24 +232,7 @@ export class ProspectorScraper {
       console.log(`📖 Página ${paginaAtual} do Google`);
 
       // Pegar todos os links de resultados
-      const links = await page.evaluate(() => {
-        const resultados: { titulo: string; url: string }[] = [];
-        const elementos = document.querySelectorAll('div.g');
-
-        elementos.forEach((el: Element) => {
-          const link = el.querySelector('a');
-          const titulo = el.querySelector('h3');
-
-          if (link && titulo) {
-            resultados.push({
-              titulo: titulo.textContent || '',
-              url: link.href
-            });
-          }
-        });
-
-        return resultados;
-      });
+      const links = await this.extrairResultadosGoogle(page);
 
       console.log(`  Encontrados ${links.length} resultados nesta página`);
 
@@ -419,24 +458,7 @@ Retorne APENAS o nome real do estabelecimento, formatado de forma legível (sem 
       await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
       // Pegar resultados
-      const resultados = await page.evaluate(() => {
-        const res: { titulo: string; url: string }[] = [];
-        const elementos = document.querySelectorAll('div.g');
-
-        elementos.forEach((el: Element) => {
-          const link = el.querySelector('a');
-          const titulo = el.querySelector('h3');
-
-          if (link && titulo) {
-            res.push({
-              titulo: titulo.textContent || '',
-              url: link.href
-            });
-          }
-        });
-
-        return res;
-      });
+      const resultados = await this.extrairResultadosGoogle(page);
 
       console.log(`  📊 Encontrados ${resultados.length} resultados`);
 
@@ -460,24 +482,7 @@ Retorne APENAS o nome real do estabelecimento, formatado de forma legível (sem 
       await page.keyboard.press('Enter');
       await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
-      const resultadosBiz = await page.evaluate(() => {
-        const res: { titulo: string; url: string }[] = [];
-        const elementos = document.querySelectorAll('div.g');
-
-        elementos.forEach((el: Element) => {
-          const link = el.querySelector('a');
-          const titulo = el.querySelector('h3');
-
-          if (link && titulo) {
-            res.push({
-              titulo: titulo.textContent || '',
-              url: link.href
-            });
-          }
-        });
-
-        return res;
-      });
+      const resultadosBiz = await this.extrairResultadosGoogle(page);
 
       const urlCorretaBiz = await this.identificarResultadoCNPJCorreto(resultadosBiz, nomeEstabelecimento, 'cnpjbiz');
 
