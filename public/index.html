@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criador de Lista via Instagram</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .small-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #4caf50;
+            color: white;
+            border-radius: 5px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🔍 Prospector Instagram</h1>
+            <p class="subtitle">Sistema de prospecção automatizada de empresas</p>
+
+            <form id="prospectorForm">
+                <div class="form-group">
+                    <label for="tipoEstabelecimento">Tipo de Estabelecimento</label>
+                    <input
+                        type="text"
+                        id="tipoEstabelecimento"
+                        placeholder="Ex: Pizzaria, Academia, Clínica Odontológica..."
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="cidade">Cidade</label>
+                    <input
+                        type="text"
+                        id="cidade"
+                        placeholder="Ex: São Paulo, Rio de Janeiro..."
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="limite">Limite de Contas (opcional)</label>
+                    <input
+                        type="number"
+                        id="limite"
+                        placeholder="Deixe vazio para buscar todas"
+                        min="1"
+                    >
+                    <p class="small-text">Se deixar vazio, buscará todas as contas disponíveis</p>
+                </div>
+
+                <button type="submit" id="btnIniciar">🚀 Iniciar Prospecção</button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p><strong>Processando...</strong></p>
+                <p class="small-text">Aguarde enquanto coletamos os dados</p>
+            </div>
+        </div>
+
+        <div class="card results" id="results">
+            <h2>📊 Resultados</h2>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('prospectorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const tipoEstabelecimento = document.getElementById('tipoEstabelecimento').value;
+            const cidade = document.getElementById('cidade').value;
+            const limite = document.getElementById('limite').value;
+
+            // Mostrar loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('btnIniciar').disabled = true;
+            document.getElementById('results').classList.remove('show');
+
+            try {
+                const response = await fetch('/api/iniciar-prospeccao', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        tipoEstabelecimento,
+                        cidade,
+                        limite: limite || null
+                    })
+                });
+
+                const data = await response.json();
+
+                // Esconder loading
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('btnIniciar').disabled = false;
+
+                if (data.sucesso) {
+                    mostrarResultados(data.resultados);
+                } else {
+                    alert('Erro: ' + data.erro);
+                }
+
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('btnIniciar').disabled = false;
+                alert('Erro ao processar requisição');
+            }
+        });
+
+        function mostrarResultados(resultados) {
+            const resultsDiv = document.getElementById('results');
+            const content = document.getElementById('resultsContent');
+
+            if (!resultados || resultados.length === 0) {
+                content.innerHTML = '<p>Nenhum resultado encontrado.</p>';
+                resultsDiv.classList.add('show');
+                return;
+            }
+
+            let html = `
+                <p><strong>Total de resultados:</strong> ${resultados.length}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Username</th>
+                            <th>Instagram</th>
+                            <th>Contato</th>
+                            <th>CNPJ Info</th>
+                            <th>Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            resultados.forEach(resultado => {
+                html += `
+                    <tr>
+                        <td>${resultado.nome || '-'}</td>
+                        <td>@${resultado.username || '-'}</td>
+                        <td><a href="${resultado.instagramUrl}" target="_blank">Ver perfil</a></td>
+                        <td>${resultado.contato ? `<span class="badge">📱 ${resultado.contato}</span>` : '-'}</td>
+                        <td>${resultado.cnpjUrl ? `<a href="${resultado.cnpjUrl}" target="_blank">Ver dados</a>` : '-'}</td>
+                        <td>${resultado.situacao || '-'}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            content.innerHTML = html;
+            resultsDiv.classList.add('show');
+        }
+    </script>
+</body>
+</html>
