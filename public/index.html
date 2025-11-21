@@ -256,6 +256,57 @@
             font-weight: 600;
         }
 
+        /* Botões de exportar */
+        .export-buttons {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-export {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-export-csv {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .btn-export-csv:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-export-json {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-export-json:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-export-txt {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+
+        .btn-export-txt:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
         a {
             color: #667eea;
             text-decoration: none;
@@ -544,6 +595,17 @@
                 <p style="font-size: 18px; font-weight: 600; margin-bottom: 15px;">
                     📊 Progresso: ${atual} de ${total} estabelecimentos processados
                 </p>
+                <div class="export-buttons">
+                    <button class="btn-export btn-export-csv" onclick="exportarCSV()">
+                        📊 Exportar CSV
+                    </button>
+                    <button class="btn-export btn-export-json" onclick="exportarJSON()">
+                        📄 Exportar JSON
+                    </button>
+                    <button class="btn-export btn-export-txt" onclick="exportarTXT()">
+                        📝 Exportar TXT
+                    </button>
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -633,6 +695,151 @@
 
             html += '</tbody></table></div>';
             content.innerHTML = html;
+        }
+
+        // Funções de exportação
+        function exportarCSV() {
+            if (!resultadosAtuais || resultadosAtuais.length === 0) {
+                alert('Não há resultados para exportar');
+                return;
+            }
+
+            // Cabeçalhos do CSV
+            const headers = [
+                'Número',
+                'Nome',
+                'Username',
+                'Instagram URL',
+                'Telefone Bio',
+                'Linktree',
+                'WhatsApp Linktree',
+                'Número WhatsApp Linktree',
+                'Site Próprio Bio',
+                'Site Próprio Linktree',
+                'Situação',
+                'Ativa Desde',
+                'Tipo Unidade',
+                'Porte',
+                'Capital Social',
+                'Sócios/Administradores',
+                'CNPJ URL'
+            ];
+
+            // Converter dados para CSV
+            let csv = headers.join(',') + '\n';
+
+            resultadosAtuais.forEach((resultado, index) => {
+                const socios = resultado.sociosAdministradores && resultado.sociosAdministradores.length > 0
+                    ? '"' + resultado.sociosAdministradores.join('; ') + '"'
+                    : '';
+
+                const linha = [
+                    index + 1,
+                    '"' + (resultado.nome || '') + '"',
+                    '"' + (resultado.username || '') + '"',
+                    resultado.instagramUrl || '',
+                    resultado.contato || '',
+                    resultado.linkTree || '',
+                    resultado.whatsappLinkTree || '',
+                    resultado.numeroWhatsappLinkTree || '',
+                    resultado.siteProprio || '',
+                    resultado.siteProprioLinktree || '',
+                    resultado.situacao || '',
+                    resultado.ativaDesde || '',
+                    resultado.tipoUnidade || '',
+                    resultado.enquadramentoPorte || '',
+                    resultado.capitalSocial || '',
+                    socios,
+                    resultado.cnpjUrl || ''
+                ];
+
+                csv += linha.join(',') + '\n';
+            });
+
+            // Download do arquivo
+            baixarArquivo(csv, 'prospeccao-instagram.csv', 'text/csv');
+        }
+
+        function exportarJSON() {
+            if (!resultadosAtuais || resultadosAtuais.length === 0) {
+                alert('Não há resultados para exportar');
+                return;
+            }
+
+            const json = JSON.stringify(resultadosAtuais, null, 2);
+            baixarArquivo(json, 'prospeccao-instagram.json', 'application/json');
+        }
+
+        function exportarTXT() {
+            if (!resultadosAtuais || resultadosAtuais.length === 0) {
+                alert('Não há resultados para exportar');
+                return;
+            }
+
+            let txt = '================================================\n';
+            txt += '        RELATÓRIO DE PROSPECÇÃO - INSTAGRAM\n';
+            txt += '================================================\n\n';
+            txt += `Total de estabelecimentos: ${resultadosAtuais.length}\n`;
+            txt += `Data: ${new Date().toLocaleString('pt-BR')}\n\n`;
+
+            resultadosAtuais.forEach((resultado, index) => {
+                txt += '================================================\n';
+                txt += `${index + 1}. ${resultado.nome || 'N/A'}\n`;
+                txt += '================================================\n\n';
+
+                txt += '📱 INSTAGRAM:\n';
+                txt += `   Nome: ${resultado.nome || 'N/A'}\n`;
+                txt += `   Username: @${resultado.username || 'N/A'}\n`;
+                txt += `   Perfil: ${resultado.instagramUrl || 'N/A'}\n\n`;
+
+                txt += '💬 CONTATOS:\n';
+                txt += `   Telefone Bio: ${resultado.contato || 'N/A'}\n`;
+                txt += `   Linktree: ${resultado.linkTree || 'N/A'}\n`;
+                txt += `   WhatsApp Linktree: ${resultado.whatsappLinkTree || 'N/A'}\n`;
+                txt += `   Número WhatsApp: ${resultado.numeroWhatsappLinkTree || 'N/A'}\n`;
+                txt += `   Site Próprio (Bio): ${resultado.siteProprio || 'N/A'}\n`;
+                txt += `   Site Próprio (Linktree): ${resultado.siteProprioLinktree || 'N/A'}\n\n`;
+
+                txt += '🏢 DADOS CNPJ:\n';
+                txt += `   Situação: ${resultado.situacao || 'N/A'}\n`;
+                txt += `   Ativa Desde: ${resultado.ativaDesde || 'N/A'}\n`;
+                txt += `   Tipo de Unidade: ${resultado.tipoUnidade || 'N/A'}\n`;
+                txt += `   Porte: ${resultado.enquadramentoPorte || 'N/A'}\n`;
+                txt += `   Capital Social: ${resultado.capitalSocial || 'N/A'}\n`;
+
+                if (resultado.sociosAdministradores && resultado.sociosAdministradores.length > 0) {
+                    txt += `   Sócios/Administradores:\n`;
+                    resultado.sociosAdministradores.forEach(socio => {
+                        txt += `      - ${socio}\n`;
+                    });
+                } else {
+                    txt += `   Sócios/Administradores: N/A\n`;
+                }
+
+                txt += `   CNPJ URL: ${resultado.cnpjUrl || 'N/A'}\n\n`;
+            });
+
+            txt += '================================================\n';
+            txt += '                   FIM DO RELATÓRIO\n';
+            txt += '================================================\n';
+
+            baixarArquivo(txt, 'prospeccao-instagram.txt', 'text/plain');
+        }
+
+        function baixarArquivo(conteudo, nomeArquivo, tipoMime) {
+            const blob = new Blob([conteudo], { type: tipoMime + ';charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', nomeArquivo);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
