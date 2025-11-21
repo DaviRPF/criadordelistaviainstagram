@@ -435,14 +435,23 @@
                             <th>Username</th>
                             <th>Instagram</th>
                             <th>Contato</th>
-                            <th>CNPJ Info</th>
                             <th>Situação</th>
+                            <th>Ativa Desde</th>
+                            <th>Tipo Unidade</th>
+                            <th>Porte</th>
+                            <th>Sócios/Admin</th>
+                            <th>CNPJ Info</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
 
             resultados.forEach((resultado, index) => {
+                // Formatar sócios/administradores
+                const socios = resultado.sociosAdministradores && resultado.sociosAdministradores.length > 0
+                    ? resultado.sociosAdministradores.join(', ')
+                    : '-';
+
                 html += `
                     <tr>
                         <td><strong>${index + 1}</strong></td>
@@ -450,8 +459,12 @@
                         <td>@${resultado.username || '-'}</td>
                         <td><a href="${resultado.instagramUrl}" target="_blank">Ver perfil</a></td>
                         <td>${resultado.contato ? `<span class="badge">📱 ${resultado.contato}</span>` : '-'}</td>
-                        <td>${resultado.cnpjUrl ? `<a href="${resultado.cnpjUrl}" target="_blank">Ver dados</a>` : '-'}</td>
                         <td>${resultado.situacao || '-'}</td>
+                        <td>${resultado.ativaDesde || '-'}</td>
+                        <td>${resultado.tipoUnidade || '-'}</td>
+                        <td>${resultado.enquadramentoPorte || '-'}</td>
+                        <td>${socios}</td>
+                        <td>${resultado.cnpjUrl ? `<a href="${resultado.cnpjUrl}" target="_blank">Ver dados</a>` : '-'}</td>
                     </tr>
                 `;
             });
