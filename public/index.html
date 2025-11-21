@@ -215,6 +215,10 @@
             border-left: 3px solid #667eea;
         }
 
+        .group-gmb {
+            border-left: 3px solid #ffc107;
+        }
+
         /* Links */
         td a {
             color: #667eea;
@@ -614,6 +618,7 @@
                                 <th colspan="3" class="group-header">📱 Instagram</th>
                                 <th colspan="5" class="group-header">💬 Contatos</th>
                                 <th colspan="7" class="group-header">🏢 Dados CNPJ</th>
+                                <th colspan="2" class="group-header">📍 Google Meu Negócio</th>
                             </tr>
                             <tr>
                                 <!-- Instagram -->
@@ -636,6 +641,10 @@
                                 <th class="group-cnpj">Capital Social</th>
                                 <th class="group-cnpj">Sócios/Admin</th>
                                 <th class="group-cnpj">Link CNPJ</th>
+
+                                <!-- Google Meu Negócio -->
+                                <th class="group-gmb">Telefone GMB</th>
+                                <th class="group-gmb">Horário</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -689,6 +698,10 @@
                         <td class="group-cnpj">${resultado.capitalSocial || '-'}</td>
                         <td class="group-cnpj" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${socios}">${socios}</td>
                         <td class="group-cnpj">${resultado.cnpjUrl ? `<a href="${resultado.cnpjUrl}" target="_blank">🔗 Ver</a>` : '-'}</td>
+
+                        <!-- Google Meu Negócio -->
+                        <td class="group-gmb">${resultado.telefoneGMB ? `📞 ${resultado.telefoneGMB}` : '-'}</td>
+                        <td class="group-gmb" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${resultado.horarioFuncionamento || ''}">${resultado.horarioFuncionamento || '-'}</td>
                     </tr>
                 `;
             });
@@ -722,7 +735,9 @@
                 'Porte',
                 'Capital Social',
                 'Sócios/Administradores',
-                'CNPJ URL'
+                'CNPJ URL',
+                'Telefone GMB',
+                'Horário Funcionamento'
             ];
 
             // Converter dados para CSV
@@ -750,7 +765,9 @@
                     resultado.enquadramentoPorte || '',
                     resultado.capitalSocial || '',
                     socios,
-                    resultado.cnpjUrl || ''
+                    resultado.cnpjUrl || '',
+                    resultado.telefoneGMB || '',
+                    '"' + (resultado.horarioFuncionamento || '') + '"'
                 ];
 
                 csv += linha.join(',') + '\n';
@@ -817,6 +834,10 @@
                 }
 
                 txt += `   CNPJ URL: ${resultado.cnpjUrl || 'N/A'}\n\n`;
+
+                txt += '📍 GOOGLE MEU NEGÓCIO:\n';
+                txt += `   Telefone: ${resultado.telefoneGMB || 'N/A'}\n`;
+                txt += `   Horário de Funcionamento: ${resultado.horarioFuncionamento || 'N/A'}\n\n`;
             });
 
             txt += '================================================\n';

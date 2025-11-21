@@ -31,6 +31,8 @@ interface Resultado {
   enquadramentoPorte?: string;
   capitalSocial?: string;
   sociosAdministradores?: string[];
+  telefoneGMB?: string;
+  horarioFuncionamento?: string;
 }
 
 export class ProspectorScraper {
@@ -456,6 +458,13 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
       // Buscar dados de CNPJ
       const dadosCnpj = await this.buscarDadosCNPJ(nomeReal);
 
+      // Buscar dados do Google Meu Negócio
+      const dadosGMB = await this.buscarGoogleMeuNegocio(
+        this.config.tipoEstabelecimento,
+        nomeReal,
+        this.config.cidade
+      );
+
       // Salvar resultado
       const resultado: Resultado = {
         nome: nomeReal,
@@ -467,7 +476,9 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         siteProprioLinktree: siteProprioLinktree,
         whatsappLinkTree: whatsappLinkTree,
         numeroWhatsappLinkTree: numeroWhatsappLinkTree,
-        ...dadosCnpj
+        ...dadosCnpj,
+        telefoneGMB: dadosGMB.telefoneGMB || undefined,
+        horarioFuncionamento: dadosGMB.horarioFuncionamento || undefined
       };
 
       this.resultados.push(resultado);
@@ -1020,6 +1031,108 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
     } catch (error: any) {
       console.error('  ❌ Erro ao extrair dados CNPJBiz:', error.message);
       return { cnpjUrl: url };
+    }
+  }
+
+  private async buscarGoogleMeuNegocio(tipoEstabelecimento: string, nomeEstabelecimento: string, cidade: string): Promise<{ telefoneGMB: string | null, horarioFuncionamento: string | null }> {
+    if (!this.browser) return { telefoneGMB: null, horarioFuncionamento: null };
+
+    console.log('');
+    console.log('📍 Buscando Google Meu Negócio...');
+    console.log(`  Estabelecimento: ${nomeEstabelecimento}`);
+
+    const page = await this.browser.newPage();
+
+    try {
+      const termoBusca = `${tipoEstabelecimento} ${nomeEstabelecimento} ${cidade}`;
+      console.log(`  🔍 Buscando: "${termoBusca}"`);
+
+      await page.goto('https://www.google.com', { waitUntil: 'networkidle2' });
+      await page.type('textarea[name="q"]', termoBusca);
+      await page.keyboard.press('Enter');
+      await page.waitForNavigation({ waitUntil: 'networkidle2' });
+      await page.waitForTimeout(2000); // Esperar carregamento completo
+
+      console.log('  ✅ Resultados carregados');
+
+      // Extrair todo o texto visível da página (o card do GMB não é um resultado normal)
+      const textoCompleto = await page.evaluate(() => {
+        return document.body.innerText;
+      });
+
+      console.log('  🤖 Usando IA para identificar card do Google Meu Negócio...');
+
+      // Usar IA para identificar e extrair dados do card GMB
+      const model = this.gemini.getGenerativeModel({ model: this.config.geminiModel });
+
+      const prompt = `Analise o seguinte texto extraído de uma página de resultados do Google e identifique o card do Google Meu Negócio.
+
+O card do Google Meu Negócio é um elemento especial (não um resultado de pesquisa comum) que aparece geralmente à direita ou no topo da página, contendo informações detalhadas sobre o estabelecimento.
+
+Texto da página:
+"""
+${textoCompleto.substring(0, 10000)}
+"""
+
+Extraia as seguintes informações do card do Google Meu Negócio:
+1. Telefone de contato (procure por números de telefone, pode estar formatado de várias formas)
+2. Horário de funcionamento (procure por informações de horário, dias da semana, "Aberto", "Fechado", etc)
+
+Responda EXATAMENTE neste formato JSON:
+{
+  "encontrouCard": true ou false,
+  "telefone": "número de telefone" ou null,
+  "horario": "horário de funcionamento resumido" ou null
+}
+
+IMPORTANTE:
+- Se não encontrar o card do GMB, use encontrouCard: false
+- Para o horário, resuma de forma concisa (ex: "Seg-Sex 8h-18h, Sáb 8h-12h")
+- Se não encontrar telefone ou horário, use null`;
+
+      const result = await model.generateContent(prompt);
+      const resposta = result.response.text().trim();
+
+      console.log('  🤖 IA respondeu:', resposta.substring(0, 200));
+
+      // Extrair JSON da resposta
+      const jsonMatch = resposta.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.log('  ⚠️  IA não retornou JSON válido');
+        await page.close();
+        return { telefoneGMB: null, horarioFuncionamento: null };
+      }
+
+      const dados = JSON.parse(jsonMatch[0]);
+
+      if (!dados.encontrouCard) {
+        console.log('  ⚠️  Card do Google Meu Negócio não encontrado');
+        await page.close();
+        return { telefoneGMB: null, horarioFuncionamento: null };
+      }
+
+      const telefoneGMB = dados.telefone !== 'null' && dados.telefone ? dados.telefone : null;
+      const horarioFuncionamento = dados.horario !== 'null' && dados.horario ? dados.horario : null;
+
+      if (telefoneGMB) {
+        console.log('  ✅ Telefone GMB encontrado:', telefoneGMB);
+      } else {
+        console.log('  ⚠️  Telefone não encontrado no card GMB');
+      }
+
+      if (horarioFuncionamento) {
+        console.log('  ✅ Horário de funcionamento encontrado:', horarioFuncionamento);
+      } else {
+        console.log('  ⚠️  Horário não encontrado no card GMB');
+      }
+
+      await page.close();
+      return { telefoneGMB, horarioFuncionamento };
+
+    } catch (error: any) {
+      console.error('  ❌ Erro ao buscar Google Meu Negócio:', error.message);
+      await page.close();
+      return { telefoneGMB: null, horarioFuncionamento: null };
     }
   }
 
