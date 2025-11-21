@@ -34,6 +34,7 @@ interface Resultado {
   enquadramentoPorte?: string;
   capitalSocial?: string;
   sociosAdministradores?: string[];
+  linkGMB?: string;
   telefoneGMB?: string;
   horarioFuncionamento?: string;
 }
@@ -492,7 +493,7 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
       // Extrair dados do perfil com múltiplos seletores
       const dadosPerfil = await page.evaluate(() => {
         // Tentar múltiplos seletores para nome
-        const nome =
+        let nome =
           document.querySelector('header section h2')?.textContent ||
           document.querySelector('header h2')?.textContent ||
           document.querySelector('header h1')?.textContent ||
@@ -502,6 +503,12 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
 
         // Username da URL é mais confiável
         const username = window.location.pathname.split('/').filter(Boolean)[0] || '';
+
+        // Validar nome extraído - se parecer inválido, usar username
+        const nomesInvalidos = ['Mensagens', 'Message', 'Seguir', 'Follow', 'Perfil', 'Profile'];
+        if (!nome || nome.length < 2 || nomesInvalidos.includes(nome.trim())) {
+          nome = username;
+        }
 
         // Tentar múltiplos seletores para bio
         const bio =
@@ -584,6 +591,7 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         whatsappLinkTree: whatsappLinkTree,
         numeroWhatsappLinkTree: numeroWhatsappLinkTree,
         ...dadosCnpj,
+        linkGMB: dadosGMB.linkGMB || undefined,
         telefoneGMB: dadosGMB.telefoneGMB || undefined,
         horarioFuncionamento: dadosGMB.horarioFuncionamento || undefined
       };
@@ -1120,8 +1128,8 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
     }
   }
 
-  private async buscarGoogleMeuNegocio(tipoEstabelecimento: string, nomeEstabelecimento: string, cidade: string): Promise<{ telefoneGMB: string | null, horarioFuncionamento: string | null }> {
-    if (!this.browser) return { telefoneGMB: null, horarioFuncionamento: null };
+  private async buscarGoogleMeuNegocio(tipoEstabelecimento: string, nomeEstabelecimento: string, cidade: string): Promise<{ linkGMB: string | null, telefoneGMB: string | null, horarioFuncionamento: string | null }> {
+    if (!this.browser) return { linkGMB: null, telefoneGMB: null, horarioFuncionamento: null };
 
     console.log('');
     console.log('📍 Buscando Google Meu Negócio...');
@@ -1140,6 +1148,9 @@ Se não encontrar alguma informação, use null ou [] para socios.`;
       await page.waitForTimeout(2000); // Esperar carregamento completo
 
       console.log('  ✅ Resultados carregados');
+
+      // Capturar URL da página (pode conter link do GMB)
+      const urlPagina = page.url();
 
       // Extrair todo o texto visível da página (o card do GMB não é um resultado normal)
       const textoCompleto = await page.evaluate(() => {
@@ -1160,18 +1171,22 @@ ${textoCompleto.substring(0, 10000)}
 
 Extraia as seguintes informações do card do Google Meu Negócio:
 1. Telefone de contato (procure por números de telefone, pode estar formatado de várias formas)
-2. Horário de funcionamento (procure por informações de horário, dias da semana, "Aberto", "Fechado", etc)
+2. Horário de funcionamento COMPLETO - não apenas "Aberto" ou "Fechado", mas o horário completo de cada dia
+   Exemplos:
+   - "Seg-Sex: 18:00-23:00, Sáb-Dom: 18:00-00:00"
+   - "Segunda a Sexta: 11h às 23h, Sábado: 11h à 00h, Domingo: Fechado"
+   - Se aparecer apenas status como "Fechado ⋅ Abre às 18:00", extraia "Abre às 18:00"
 
 Responda EXATAMENTE neste formato JSON:
 {
   "encontrouCard": true ou false,
   "telefone": "número de telefone" ou null,
-  "horario": "horário de funcionamento resumido" ou null
+  "horario": "horário de funcionamento completo" ou null
 }
 
 IMPORTANTE:
 - Se não encontrar o card do GMB, use encontrouCard: false
-- Para o horário, resuma de forma concisa (ex: "Seg-Sex 8h-18h, Sáb 8h-12h")
+- Para o horário, inclua TODOS os horários disponíveis, não apenas o status atual
 - Se não encontrar telefone ou horário, use null`;
 
       const resposta = await this.chamarIAComRetry(prompt);
@@ -1183,7 +1198,7 @@ IMPORTANTE:
       if (!jsonMatch) {
         console.log('  ⚠️  IA não retornou JSON válido');
         await page.close();
-        return { telefoneGMB: null, horarioFuncionamento: null };
+        return { linkGMB: null, telefoneGMB: null, horarioFuncionamento: null };
       }
 
       const dados = JSON.parse(jsonMatch[0]);
@@ -1191,11 +1206,16 @@ IMPORTANTE:
       if (!dados.encontrouCard) {
         console.log('  ⚠️  Card do Google Meu Negócio não encontrado');
         await page.close();
-        return { telefoneGMB: null, horarioFuncionamento: null };
+        return { linkGMB: null, telefoneGMB: null, horarioFuncionamento: null };
       }
 
       const telefoneGMB = dados.telefone !== 'null' && dados.telefone ? dados.telefone : null;
       const horarioFuncionamento = dados.horario !== 'null' && dados.horario ? dados.horario : null;
+
+      // Criar link do GMB baseado na busca
+      const linkGMB = `https://www.google.com/search?q=${encodeURIComponent(termoBusca)}`;
+
+      console.log('  ✅ Link GMB:', linkGMB);
 
       if (telefoneGMB) {
         console.log('  ✅ Telefone GMB encontrado:', telefoneGMB);
@@ -1210,12 +1230,12 @@ IMPORTANTE:
       }
 
       await page.close();
-      return { telefoneGMB, horarioFuncionamento };
+      return { linkGMB, telefoneGMB, horarioFuncionamento };
 
     } catch (error: any) {
       console.error('  ❌ Erro ao buscar Google Meu Negócio:', error.message);
       await page.close();
-      return { telefoneGMB: null, horarioFuncionamento: null };
+      return { linkGMB: null, telefoneGMB: null, horarioFuncionamento: null };
     }
   }
 

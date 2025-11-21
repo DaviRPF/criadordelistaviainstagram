@@ -819,6 +819,7 @@
                                 <th class="group-cnpj">Link CNPJ</th>
 
                                 <!-- Google Meu Negócio -->
+                                <th class="group-gmb">Link GMB</th>
                                 <th class="group-gmb">Telefone GMB</th>
                                 <th class="group-gmb">Horário</th>
                             </tr>
@@ -876,6 +877,7 @@
                         <td class="group-cnpj">${resultado.cnpjUrl ? `<a href="${resultado.cnpjUrl}" target="_blank">🔗 Ver</a>` : '-'}</td>
 
                         <!-- Google Meu Negócio -->
+                        <td class="group-gmb">${resultado.linkGMB ? `<a href="${resultado.linkGMB}" target="_blank">🔗 Ver GMB</a>` : '-'}</td>
                         <td class="group-gmb">${resultado.telefoneGMB ? `📞 ${resultado.telefoneGMB}` : '-'}</td>
                         <td class="group-gmb" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${resultado.horarioFuncionamento || ''}">${resultado.horarioFuncionamento || '-'}</td>
                     </tr>
@@ -912,6 +914,7 @@
                 'Capital Social',
                 'Sócios/Administradores',
                 'CNPJ URL',
+                'Link GMB',
                 'Telefone GMB',
                 'Horário Funcionamento'
             ];
@@ -942,6 +945,7 @@
                     resultado.capitalSocial || '',
                     socios,
                     resultado.cnpjUrl || '',
+                    resultado.linkGMB || '',
                     resultado.telefoneGMB || '',
                     '"' + (resultado.horarioFuncionamento || '') + '"'
                 ];
@@ -1012,6 +1016,7 @@
                 txt += `   CNPJ URL: ${resultado.cnpjUrl || 'N/A'}\n\n`;
 
                 txt += '📍 GOOGLE MEU NEGÓCIO:\n';
+                txt += `   Link GMB: ${resultado.linkGMB || 'N/A'}\n`;
                 txt += `   Telefone: ${resultado.telefoneGMB || 'N/A'}\n`;
                 txt += `   Horário de Funcionamento: ${resultado.horarioFuncionamento || 'N/A'}\n\n`;
             });
