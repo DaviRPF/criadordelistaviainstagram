@@ -437,9 +437,24 @@
                         type="file"
                         id="cacheUpload"
                         accept=".csv,.json"
+                        multiple
                         style="padding: 8px;"
                     >
                     <p class="small-text" id="cacheStatus">Nenhum arquivo importado</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="cachePaste">✂️ Ou cole os dados aqui (CSV/JSON)</label>
+                    <textarea
+                        id="cachePaste"
+                        placeholder="Cole os dados de exports antigos aqui (CSV ou JSON)..."
+                        rows="5"
+                        style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; font-family: monospace; font-size: 13px;"
+                    ></textarea>
+                    <button type="button" id="btnProcessarPaste" style="width: auto; padding: 10px 20px; margin-top: 10px;">
+                        📋 Processar Dados Colados
+                    </button>
+                    <p class="small-text" id="pasteStatus"></p>
                 </div>
 
                 <button type="submit" id="btnIniciar">🚀 Iniciar Prospecção</button>
@@ -521,20 +536,12 @@
         let resultadosAtuais = [];
         let estatisticas = { puladas: 0, novas: 0 };
 
-        // Upload de cache
-        document.getElementById('cacheUpload').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const statusEl = document.getElementById('cacheStatus');
-            statusEl.textContent = '⏳ Processando arquivo...';
+        // Função auxiliar para extrair usernames de texto (CSV ou JSON)
+        function extrairUsernamesDeTexto(text, formato) {
+            let usernames = [];
 
             try {
-                const text = await file.text();
-                let usernames = [];
-
-                // Processar CSV
-                if (file.name.endsWith('.csv')) {
+                if (formato === 'csv') {
                     const lines = text.split('\n');
                     // Assumir que username está na coluna 3 (índice 2)
                     for (let i = 1; i < lines.length; i++) { // Pular cabeçalho
@@ -542,36 +549,118 @@
                         if (cols.length >= 3 && cols[2]) {
                             // Remover @ e aspas
                             const username = cols[2].replace(/[@"]/g, '').trim();
-                            if (username) usernames.push(username);
+                            if (username && username !== 'Username') usernames.push(username);
                         }
                     }
-                }
-                // Processar JSON
-                else if (file.name.endsWith('.json')) {
+                } else if (formato === 'json') {
                     const data = JSON.parse(text);
                     if (Array.isArray(data)) {
                         usernames = data.map(item => item.username).filter(Boolean);
                     }
                 }
+            } catch (error) {
+                console.error('Erro ao extrair usernames:', error);
+            }
 
-                // Enviar para API
-                const response = await fetch('/api/importar-cache', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usernames })
-                });
+            return usernames;
+        }
 
-                const result = await response.json();
+        // Função para enviar usernames para API
+        async function enviarUsernamesParaCache(usernames) {
+            const response = await fetch('/api/importar-cache', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usernames })
+            });
+
+            return await response.json();
+        }
+
+        // Upload de cache (múltiplos arquivos)
+        document.getElementById('cacheUpload').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            const statusEl = document.getElementById('cacheStatus');
+            statusEl.textContent = `⏳ Processando ${files.length} arquivo(s)...`;
+
+            try {
+                let todosUsernames = [];
+
+                // Processar cada arquivo
+                for (const file of files) {
+                    const text = await file.text();
+                    let formato = 'csv';
+
+                    if (file.name.endsWith('.json')) {
+                        formato = 'json';
+                    }
+
+                    const usernames = extrairUsernamesDeTexto(text, formato);
+                    todosUsernames = todosUsernames.concat(usernames);
+                    console.log(`Arquivo ${file.name}: ${usernames.length} usernames`);
+                }
+
+                // Enviar tudo para API
+                const result = await enviarUsernamesParaCache(todosUsernames);
 
                 if (result.sucesso) {
-                    statusEl.textContent = `✅ Importados ${result.novos} novos usernames (total: ${result.total})`;
+                    statusEl.textContent = `✅ ${files.length} arquivo(s): ${result.novos} novos usernames (total: ${result.total})`;
                 } else {
                     statusEl.textContent = '❌ Erro ao importar: ' + result.erro;
                 }
 
             } catch (error) {
-                console.error('Erro ao processar arquivo:', error);
-                statusEl.textContent = '❌ Erro ao processar arquivo';
+                console.error('Erro ao processar arquivos:', error);
+                statusEl.textContent = '❌ Erro ao processar arquivos';
+            }
+        });
+
+        // Processar dados colados
+        document.getElementById('btnProcessarPaste').addEventListener('click', async () => {
+            const textarea = document.getElementById('cachePaste');
+            const text = textarea.value.trim();
+            const statusEl = document.getElementById('pasteStatus');
+
+            if (!text) {
+                statusEl.textContent = '⚠️ Cole os dados primeiro';
+                return;
+            }
+
+            statusEl.textContent = '⏳ Processando dados...';
+
+            try {
+                let usernames = [];
+
+                // Tentar detectar formato
+                if (text.startsWith('[') || text.startsWith('{')) {
+                    // Provavelmente JSON
+                    usernames = extrairUsernamesDeTexto(text, 'json');
+                } else {
+                    // Provavelmente CSV
+                    usernames = extrairUsernamesDeTexto(text, 'csv');
+                }
+
+                if (usernames.length === 0) {
+                    statusEl.textContent = '⚠️ Nenhum username encontrado no texto';
+                    return;
+                }
+
+                console.log(`Dados colados: ${usernames.length} usernames encontrados`);
+
+                // Enviar para API
+                const result = await enviarUsernamesParaCache(usernames);
+
+                if (result.sucesso) {
+                    statusEl.textContent = `✅ ${result.novos} novos usernames importados (total: ${result.total})`;
+                    textarea.value = ''; // Limpar textarea
+                } else {
+                    statusEl.textContent = '❌ Erro ao importar: ' + result.erro;
+                }
+
+            } catch (error) {
+                console.error('Erro ao processar dados colados:', error);
+                statusEl.textContent = '❌ Erro ao processar dados';
             }
         });
 
