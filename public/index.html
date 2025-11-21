@@ -434,7 +434,10 @@
                             <th>Nome</th>
                             <th>Username</th>
                             <th>Instagram</th>
-                            <th>Contato</th>
+                            <th>Contato Bio</th>
+                            <th>Linktree</th>
+                            <th>WhatsApp Linktree</th>
+                            <th>Site Próprio</th>
                             <th>Situação</th>
                             <th>Ativa Desde</th>
                             <th>Tipo Unidade</th>
@@ -452,6 +455,13 @@
                     ? resultado.sociosAdministradores.join(', ')
                     : '-';
 
+                // Formatar WhatsApp do Linktree
+                let whatsappLinktree = '-';
+                if (resultado.whatsappLinkTree) {
+                    const numero = resultado.numeroWhatsappLinkTree || 'Ver';
+                    whatsappLinktree = `<a href="${resultado.whatsappLinkTree}" target="_blank">📱 ${numero}</a>`;
+                }
+
                 html += `
                     <tr>
                         <td><strong>${index + 1}</strong></td>
@@ -459,6 +469,9 @@
                         <td>@${resultado.username || '-'}</td>
                         <td><a href="${resultado.instagramUrl}" target="_blank">Ver perfil</a></td>
                         <td>${resultado.contato ? `<span class="badge">📱 ${resultado.contato}</span>` : '-'}</td>
+                        <td>${resultado.linkTree ? `<a href="${resultado.linkTree}" target="_blank">🌳 Linktree</a>` : '-'}</td>
+                        <td>${whatsappLinktree}</td>
+                        <td>${resultado.siteProprio ? `<a href="${resultado.siteProprio}" target="_blank">🌐 Site</a>` : '-'}</td>
                         <td>${resultado.situacao || '-'}</td>
                         <td>${resultado.ativaDesde || '-'}</td>
                         <td>${resultado.tipoUnidade || '-'}</td>

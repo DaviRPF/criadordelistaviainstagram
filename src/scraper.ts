@@ -18,6 +18,10 @@ interface Resultado {
   username: string;
   instagramUrl: string;
   contato?: string;
+  linkTree?: string;
+  siteProprio?: string;
+  whatsappLinkTree?: string;
+  numeroWhatsappLinkTree?: string;
   cnpjUrl?: string;
   situacao?: string;
   ativaDesde?: string;
@@ -404,6 +408,25 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         console.log('     📞 Contato encontrado:', contato);
       }
 
+      // Extrair links (Linktree/Site próprio) da bio
+      const { linkTree, siteProprio } = await this.extrairLinksDaBio(dadosPerfil.bio);
+
+      let whatsappLinkTree: string | undefined = undefined;
+      let numeroWhatsappLinkTree: string | undefined = undefined;
+
+      if (linkTree) {
+        console.log('     🌳 Linktree encontrado:', linkTree);
+
+        // Processar Linktree para buscar WhatsApp
+        const dadosLinktree = await this.processarLinktree(linkTree);
+        whatsappLinkTree = dadosLinktree.whatsappLink || undefined;
+        numeroWhatsappLinkTree = dadosLinktree.numeroWhatsapp || undefined;
+      }
+
+      if (siteProprio) {
+        console.log('     🌐 Site próprio encontrado:', siteProprio);
+      }
+
       // Identificar nome real do estabelecimento
       // Se nome estiver vazio, usar o username
       const nomeParaIA = dadosPerfil.nome || dadosPerfil.username;
@@ -419,6 +442,10 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         username: dadosPerfil.username,
         instagramUrl: url,
         contato: contato || undefined,
+        linkTree: linkTree || undefined,
+        siteProprio: siteProprio || undefined,
+        whatsappLinkTree: whatsappLinkTree,
+        numeroWhatsappLinkTree: numeroWhatsappLinkTree,
         ...dadosCnpj
       };
 
@@ -464,6 +491,114 @@ Se encontrar algum contato, retorne APENAS o número ou link. Se não encontrar,
     } catch (error: any) {
       console.error('     ⚠️  Erro ao extrair contato:', error.message);
       return null;
+    }
+  }
+
+  private async extrairLinksDaBio(bio: string): Promise<{ linkTree: string | null, siteProprio: string | null }> {
+    console.log('');
+    console.log('     🔗 Usando IA para extrair links da bio...');
+
+    try {
+      const model = this.gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+      const prompt = `Analise a seguinte bio do Instagram e identifique se há:
+1. Link do Linktree (linktr.ee ou beacons.ai ou outros serviços similares de link in bio)
+2. Site próprio (qualquer outro link que seja um site próprio da empresa)
+
+Bio: "${bio}"
+
+Responda EXATAMENTE neste formato JSON:
+{
+  "linktree": "URL_DO_LINKTREE ou null",
+  "site": "URL_DO_SITE_PROPRIO ou null"
+}
+
+Se não encontrar algum dos links, use null.`;
+
+      const result = await model.generateContent(prompt);
+      const resposta = result.response.text().trim();
+
+      console.log(`     🤖 IA respondeu: ${resposta}`);
+
+      // Tentar extrair JSON da resposta
+      const jsonMatch = resposta.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const dados = JSON.parse(jsonMatch[0]);
+        return {
+          linkTree: dados.linktree !== 'null' && dados.linktree ? dados.linktree : null,
+          siteProprio: dados.site !== 'null' && dados.site ? dados.site : null
+        };
+      }
+
+      return { linkTree: null, siteProprio: null };
+    } catch (error: any) {
+      console.error('     ⚠️  Erro ao extrair links:', error.message);
+      return { linkTree: null, siteProprio: null };
+    }
+  }
+
+  private async processarLinktree(linktreeUrl: string): Promise<{ whatsappLink: string | null, numeroWhatsapp: string | null }> {
+    if (!this.browser) return { whatsappLink: null, numeroWhatsapp: null };
+
+    console.log('');
+    console.log('     🌳 Processando Linktree...');
+    console.log('     🔗 URL:', linktreeUrl);
+
+    const page = await this.browser.newPage();
+
+    try {
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      await page.goto(linktreeUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+      console.log('     ✅ Linktree carregado');
+      await page.waitForTimeout(2000);
+
+      // Extrair todos os links da página
+      const links = await page.evaluate(() => {
+        const elementos = Array.from(document.querySelectorAll('a[href]'));
+        return elementos.map(el => ({
+          href: (el as HTMLAnchorElement).href,
+          text: el.textContent?.trim() || ''
+        }));
+      });
+
+      console.log(`     🔍 Encontrados ${links.length} links no Linktree`);
+
+      // Procurar link do WhatsApp
+      const whatsappLink = links.find(link =>
+        link.href.includes('wa.me') ||
+        link.href.includes('whatsapp.com') ||
+        link.href.includes('api.whatsapp.com') ||
+        link.text.toLowerCase().includes('whatsapp') ||
+        link.text.toLowerCase().includes('zap')
+      );
+
+      if (whatsappLink) {
+        console.log('     ✅ Link do WhatsApp encontrado:', whatsappLink.href);
+
+        // Extrair número do link do WhatsApp
+        const numeroMatch = whatsappLink.href.match(/(\d{10,15})/);
+        const numero = numeroMatch ? numeroMatch[1] : null;
+
+        if (numero) {
+          console.log('     📱 Número extraído:', numero);
+        }
+
+        await page.close();
+        return {
+          whatsappLink: whatsappLink.href,
+          numeroWhatsapp: numero
+        };
+      }
+
+      console.log('     ⚠️  Nenhum link do WhatsApp encontrado no Linktree');
+      await page.close();
+      return { whatsappLink: null, numeroWhatsapp: null };
+
+    } catch (error: any) {
+      console.error('     ❌ Erro ao processar Linktree:', error.message);
+      await page.close();
+      return { whatsappLink: null, numeroWhatsapp: null };
     }
   }
 
