@@ -45,14 +45,11 @@ app.get('/', (req, res) => {
 
 // Rota para fazer login no Instagram
 app.post('/api/login-instagram', async (req, res) => {
-  const { usuario, senha } = req.body;
-
   console.log('');
-  console.log('🔐 Tentando fazer login no Instagram...');
-  console.log('  Usuário:', usuario);
+  console.log('🔐 Abrindo navegador para login manual...');
 
   try {
-    await instagramAuth.fazerLogin(usuario, senha);
+    await instagramAuth.fazerLoginManual();
 
     console.log('✅ Login realizado com sucesso!');
     res.json({

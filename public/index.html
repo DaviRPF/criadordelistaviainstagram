@@ -209,29 +209,13 @@
                 <span>❌ Não logado</span>
             </div>
 
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="instagramUser">Usuário do Instagram</label>
-                    <input
-                        type="text"
-                        id="instagramUser"
-                        placeholder="seu_usuario ou email"
-                        required
-                    >
-                </div>
+            <div id="loginForm">
+                <p class="small-text" style="margin-bottom: 15px;">
+                    Um navegador será aberto. Faça login no Instagram normalmente e depois <strong>feche o navegador</strong> quando terminar.
+                </p>
 
-                <div class="form-group">
-                    <label for="instagramPass">Senha do Instagram</label>
-                    <input
-                        type="password"
-                        id="instagramPass"
-                        placeholder="••••••••"
-                        required
-                    >
-                </div>
-
-                <button type="submit" id="btnLogin">🔑 Fazer Login</button>
-            </form>
+                <button type="button" id="btnLogin">🌐 Abrir Navegador para Login</button>
+            </div>
         </div>
 
         <!-- Card de Prospecção -->
@@ -311,41 +295,36 @@
         }
 
         // Login no Instagram
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const usuario = document.getElementById('instagramUser').value;
-            const senha = document.getElementById('instagramPass').value;
+        document.getElementById('btnLogin').addEventListener('click', async () => {
             const btnLogin = document.getElementById('btnLogin');
 
             btnLogin.disabled = true;
-            btnLogin.textContent = '🔄 Fazendo login...';
+            btnLogin.textContent = '🌐 Abrindo navegador...';
 
             try {
                 const response = await fetch('/api/login-instagram', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ usuario, senha })
+                    }
                 });
 
                 const data = await response.json();
 
                 if (data.sucesso) {
                     marcarComoLogado();
-                    alert('Login realizado com sucesso!');
+                    alert('Login salvo com sucesso! Cookies do Instagram foram salvos.');
                 } else {
-                    alert('Erro no login: ' + data.erro);
+                    alert('Erro: ' + data.erro);
                     btnLogin.disabled = false;
-                    btnLogin.textContent = '🔑 Fazer Login';
+                    btnLogin.textContent = '🌐 Abrir Navegador para Login';
                 }
 
             } catch (error) {
                 console.error('Erro:', error);
                 alert('Erro ao fazer login');
                 btnLogin.disabled = false;
-                btnLogin.textContent = '🔑 Fazer Login';
+                btnLogin.textContent = '🌐 Abrir Navegador para Login';
             }
         });
 

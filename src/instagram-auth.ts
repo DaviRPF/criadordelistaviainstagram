@@ -37,9 +37,9 @@ export class InstagramAuth {
     return this.cookies !== null && this.cookies.length > 0;
   }
 
-  public async fazerLogin(usuario: string, senha: string): Promise<void> {
+  public async fazerLoginManual(): Promise<void> {
     console.log('');
-    console.log('🌐 Abrindo navegador para login...');
+    console.log('🌐 Abrindo navegador para login manual...');
 
     const browser = await puppeteer.launch({
       headless: false,
@@ -47,99 +47,90 @@ export class InstagramAuth {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-blink-features=AutomationControlled'
-      ]
+      ],
+      defaultViewport: null
     });
 
-    const page = await browser.newPage();
-
     try {
+      const page = await browser.newPage();
+
       // Setar user agent
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
       console.log('📱 Acessando Instagram...');
-      await page.goto('https://www.instagram.com/accounts/login/', {
+      await page.goto('https://www.instagram.com/', {
         waitUntil: 'networkidle2',
         timeout: 60000
       });
 
-      // Esperar a página carregar
-      await page.waitForTimeout(3000);
+      console.log('');
+      console.log('👤 Faça login manualmente no navegador que foi aberto.');
+      console.log('⏳ Aguardando você fazer login...');
+      console.log('💡 Quando o login for detectado, os cookies serão salvos automaticamente.');
+      console.log('');
 
-      console.log('⌨️  Preenchendo credenciais...');
+      // Monitorar a URL e cookies até detectar que o login foi feito
+      let loginDetectado = false;
+      const intervalo = setInterval(async () => {
+        try {
+          const url = page.url();
+          const cookies = await page.cookies();
 
-      // Esperar os campos aparecerem
-      await page.waitForSelector('input[name="username"]', { timeout: 10000 });
+          // Verificar se há cookies de sessão do Instagram
+          const temCookiesSessao = cookies.some(c =>
+            c.name.includes('sessionid') || c.name.includes('csrftoken')
+          );
 
-      // Preencher usuário
-      await page.type('input[name="username"]', usuario, { delay: 100 });
+          // Se não está mais na página de login e tem cookies de sessão
+          if (!url.includes('/accounts/login') && temCookiesSessao && cookies.length > 5) {
+            loginDetectado = true;
+            clearInterval(intervalo);
 
-      // Preencher senha
-      await page.type('input[name="password"]', senha, { delay: 100 });
+            console.log(`✅ Login detectado! ${cookies.length} cookies salvos`);
+            this.salvarCookies(cookies);
 
-      // Esperar um pouco
-      await page.waitForTimeout(1000);
+            // Fechar navegador após um pequeno delay
+            setTimeout(async () => {
+              await browser.close();
+            }, 2000);
+          }
+        } catch (e) {
+          // Se der erro (página fechada), apenas limpar o intervalo
+          clearInterval(intervalo);
+        }
+      }, 1000);
 
-      console.log('🔑 Fazendo login...');
-
-      // Clicar no botão de login
-      await page.click('button[type="submit"]');
-
-      // Esperar navegação ou mensagem de erro
-      await Promise.race([
-        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
-        page.waitForTimeout(15000)
-      ]);
-
-      // Esperar um pouco mais
-      await page.waitForTimeout(3000);
-
-      // Verificar se o login foi bem-sucedido
-      const urlAtual = page.url();
-
-      if (urlAtual.includes('/challenge/')) {
-        throw new Error('Instagram solicitou verificação adicional. Complete manualmente e tente novamente.');
-      }
-
-      if (urlAtual.includes('/accounts/login/')) {
-        // Verificar se tem mensagem de erro
-        const temErro = await page.evaluate(() => {
-          const erros = document.body.innerText;
-          return erros.includes('senha incorreta') ||
-                 erros.includes('incorrect') ||
-                 erros.includes('wasn\'t') ||
-                 erros.includes('não foi possível');
+      // Esperar o navegador ser fechado (seja automaticamente ou pelo usuário)
+      await new Promise<void>((resolve) => {
+        browser.on('disconnected', () => {
+          clearInterval(intervalo);
+          resolve();
         });
+      });
 
-        if (temErro) {
-          throw new Error('Usuário ou senha incorretos');
-        }
+      if (!loginDetectado) {
+        throw new Error('Navegador foi fechado antes de completar o login.');
       }
-
-      // Tentar clicar em "Não agora" se aparecer popup de notificações
-      try {
-        await page.waitForTimeout(2000);
-        const botaoNaoAgora = await page.$('button:has-text("Agora não")');
-        if (botaoNaoAgora) {
-          await botaoNaoAgora.click();
-          await page.waitForTimeout(1000);
-        }
-      } catch (e) {
-        // Ignorar se não encontrar
-      }
-
-      // Pegar cookies
-      const cookies = await page.cookies();
-
-      console.log(`✅ Login bem-sucedido! ${cookies.length} cookies salvos`);
-
-      // Salvar cookies
-      this.salvarCookies(cookies);
 
     } catch (error: any) {
-      console.error('❌ Erro durante login:', error.message);
-      throw error;
+      // Se o navegador foi fechado antes de completar
+      if (error.message.includes('Target closed') || error.message.includes('Session closed')) {
+        console.log('');
+        console.log('⚠️  Navegador foi fechado. Tentando salvar cookies...');
+
+        // Não fazer nada, já foi tratado acima
+      } else {
+        console.error('❌ Erro durante login:', error.message);
+        throw error;
+      }
     } finally {
-      await browser.close();
+      try {
+        if (browser.isConnected()) {
+          await browser.close();
+        }
+      } catch (e) {
+        // Ignorar erros ao fechar
+      }
     }
   }
 
