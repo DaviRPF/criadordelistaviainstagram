@@ -180,7 +180,7 @@ export class ProspectorScraper {
         const resultados: { titulo: string; url: string }[] = [];
         const elementos = document.querySelectorAll('div.g');
 
-        elementos.forEach(el => {
+        elementos.forEach((el: Element) => {
           const link = el.querySelector('a');
           const titulo = el.querySelector('h3');
 
@@ -423,7 +423,7 @@ Retorne APENAS o nome real do estabelecimento, formatado de forma legível (sem 
         const res: { titulo: string; url: string }[] = [];
         const elementos = document.querySelectorAll('div.g');
 
-        elementos.forEach(el => {
+        elementos.forEach((el: Element) => {
           const link = el.querySelector('a');
           const titulo = el.querySelector('h3');
 
@@ -464,7 +464,7 @@ Retorne APENAS o nome real do estabelecimento, formatado de forma legível (sem 
         const res: { titulo: string; url: string }[] = [];
         const elementos = document.querySelectorAll('div.g');
 
-        elementos.forEach(el => {
+        elementos.forEach((el: Element) => {
           const link = el.querySelector('a');
           const titulo = el.querySelector('h3');
 
@@ -559,7 +559,7 @@ Retorne APENAS o número do resultado correto (1, 2, 3...) ou "NENHUM" se nenhum
           ativaDesde: getTexto('.ativa-desde'),
           tipoUnidade: getTexto('.tipo-unidade'),
           enquadramentoPorte: getTexto('.enquadramento-porte'),
-          sociosAdministradores: Array.from(document.querySelectorAll('.socio')).map(el => el.textContent?.trim() || '')
+          sociosAdministradores: Array.from(document.querySelectorAll('.socio')).map((el: Element) => el.textContent?.trim() || '')
         };
       });
 
@@ -589,9 +589,9 @@ Retorne APENAS o número do resultado correto (1, 2, 3...) ou "NENHUM" se nenhum
       const dados = await page.evaluate(() => {
         const getTexto = (texto: string) => {
           const els = Array.from(document.querySelectorAll('td, div, span'));
-          const el = els.find(e => e.textContent?.includes(texto));
-          return el?.nextElementSibling?.textContent?.trim() ||
-                 el?.textContent?.replace(texto, '').trim() || '';
+          const el = els.find((e: Element) => e.textContent?.includes(texto));
+          return (el as Element)?.nextElementSibling?.textContent?.trim() ||
+                 (el as Element)?.textContent?.replace(texto, '').trim() || '';
         };
 
         return {
@@ -599,7 +599,7 @@ Retorne APENAS o número do resultado correto (1, 2, 3...) ou "NENHUM" se nenhum
           ativaDesde: getTexto('Data de Abertura'),
           tipoUnidade: getTexto('Tipo'),
           enquadramentoPorte: getTexto('Porte'),
-          sociosAdministradores: Array.from(document.querySelectorAll('.qsa-item, .socio-item')).map(el => el.textContent?.trim() || '')
+          sociosAdministradores: Array.from(document.querySelectorAll('.qsa-item, .socio-item')).map((el: Element) => el.textContent?.trim() || '')
         };
       });
 
