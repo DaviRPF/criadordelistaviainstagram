@@ -52,6 +52,21 @@ export class ProspectorScraper {
     });
   }
 
+  // Função auxiliar para normalizar URLs (adicionar https:// se necessário)
+  private normalizarUrl(url: string | null): string | null {
+    if (!url) return null;
+    const urlTrimmed = url.trim();
+    if (!urlTrimmed) return null;
+
+    // Se já tem protocolo, retorna como está
+    if (urlTrimmed.startsWith('http://') || urlTrimmed.startsWith('https://')) {
+      return urlTrimmed;
+    }
+
+    // Adiciona https://
+    return 'https://' + urlTrimmed;
+  }
+
   async executar(): Promise<Resultado[]> {
     try {
       console.log('');
@@ -530,9 +545,14 @@ Se não encontrar algum dos links, use null.`;
       const jsonMatch = resposta.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const dados = JSON.parse(jsonMatch[0]);
+
+        // Normalizar URLs antes de retornar
+        const linkTree = dados.linktree !== 'null' && dados.linktree ? dados.linktree : null;
+        const siteProprio = dados.site !== 'null' && dados.site ? dados.site : null;
+
         return {
-          linkTree: dados.linktree !== 'null' && dados.linktree ? dados.linktree : null,
-          siteProprio: dados.site !== 'null' && dados.site ? dados.site : null
+          linkTree: this.normalizarUrl(linkTree),
+          siteProprio: this.normalizarUrl(siteProprio)
         };
       }
 
@@ -546,15 +566,22 @@ Se não encontrar algum dos links, use null.`;
   private async processarLinktree(linktreeUrl: string): Promise<{ whatsappLink: string | null, numeroWhatsapp: string | null, siteProprio: string | null }> {
     if (!this.browser) return { whatsappLink: null, numeroWhatsapp: null, siteProprio: null };
 
+    // Normalizar URL - adicionar https:// se não tiver protocolo
+    const urlNormalizada = this.normalizarUrl(linktreeUrl);
+    if (!urlNormalizada) {
+      console.log('     ⚠️  URL do Linktree inválida');
+      return { whatsappLink: null, numeroWhatsapp: null, siteProprio: null };
+    }
+
     console.log('');
     console.log('     🌳 Processando Linktree...');
-    console.log('     🔗 URL:', linktreeUrl);
+    console.log('     🔗 URL:', urlNormalizada);
 
     const page = await this.browser.newPage();
 
     try {
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      await page.goto(linktreeUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      await page.goto(urlNormalizada, { waitUntil: 'networkidle2', timeout: 30000 });
 
       console.log('     ✅ Linktree carregado');
       await page.waitForTimeout(2000);
@@ -631,7 +658,7 @@ Se não encontrar, use encontrou: false.`;
 
       // Processar WhatsApp
       if (dados.whatsapp?.encontrou && dados.whatsapp?.link) {
-        whatsappLink = dados.whatsapp.link;
+        whatsappLink = this.normalizarUrl(dados.whatsapp.link);
         numeroWhatsapp = dados.whatsapp.numero || null;
 
         console.log('     ✅ Link do WhatsApp encontrado pela IA:', whatsappLink);
@@ -644,7 +671,7 @@ Se não encontrar, use encontrou: false.`;
 
       // Processar Site Próprio
       if (dados.siteProprio?.encontrou && dados.siteProprio?.link) {
-        siteProprio = dados.siteProprio.link;
+        siteProprio = this.normalizarUrl(dados.siteProprio.link);
         console.log('     ✅ Site próprio encontrado pela IA:', siteProprio);
       } else {
         console.log('     ⚠️  IA não encontrou site próprio no Linktree');
