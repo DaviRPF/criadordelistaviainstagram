@@ -72,7 +72,7 @@ app.get('/api/verificar-login', (req, res) => {
   });
 });
 
-// Rota para iniciar o scraping
+// Rota para iniciar o scraping com SSE (Server-Sent Events)
 app.post('/api/iniciar-prospeccao', async (req, res) => {
   const { tipoEstabelecimento, cidade, limite } = req.body;
 
@@ -83,6 +83,15 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
   console.log('  Limite:', limite || 'Sem limite');
   console.log('');
 
+  // Configurar SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const enviarEvento = (tipo: string, dados: any) => {
+    res.write(`data: ${JSON.stringify({ tipo, dados })}\n\n`);
+  };
+
   try {
     const scraper = new ProspectorScraper({
       tipoEstabelecimento,
@@ -90,22 +99,21 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
       limite: limite ? parseInt(limite) : undefined,
       geminiApiKey: process.env.GEMINI_API_KEY!,
       twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
-      instagramAuth
+      instagramAuth,
+      onProgresso: (resultado, atual, total) => {
+        enviarEvento('progresso', { resultado, atual, total });
+      }
     });
 
     const resultados = await scraper.executar();
 
-    res.json({
-      sucesso: true,
-      resultados
-    });
+    enviarEvento('concluido', { resultados });
+    res.end();
 
   } catch (error: any) {
     console.error('❌ Erro durante a prospecção:', error.message);
-    res.status(500).json({
-      sucesso: false,
-      erro: error.message
-    });
+    enviarEvento('erro', { erro: error.message });
+    res.end();
   }
 });
 

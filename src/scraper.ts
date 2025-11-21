@@ -10,6 +10,7 @@ interface ProspectorConfig {
   geminiApiKey: string;
   twoCaptchaApiKey: string;
   instagramAuth: InstagramAuth;
+  onProgresso?: (resultado: Resultado, atual: number, total: number | string) => void;
 }
 
 interface Resultado {
@@ -252,8 +253,9 @@ export class ProspectorScraper {
           console.log('     ✅ É do Instagram! Processando...');
 
           try {
-            await this.processarPerfilInstagram(link.url);
             contadorResultados++;
+            const total = this.config.limite || '?';
+            await this.processarPerfilInstagram(link.url, contadorResultados, total);
             temMaisInstagram = true;
 
             // Verificar limite
@@ -321,11 +323,12 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
     }
   }
 
-  private async processarPerfilInstagram(url: string): Promise<void> {
+  private async processarPerfilInstagram(url: string, atual: number, total: number | string): Promise<void> {
     if (!this.browser) return;
 
     console.log('');
-    console.log('📱 Abrindo perfil do Instagram...');
+    console.log(`📱 Estabelecimento ${atual} de ${total}`);
+    console.log('   Abrindo perfil do Instagram...');
 
     const page = await this.browser.newPage();
 
@@ -411,13 +414,20 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
       const dadosCnpj = await this.buscarDadosCNPJ(nomeReal);
 
       // Salvar resultado
-      this.resultados.push({
+      const resultado: Resultado = {
         nome: nomeReal,
         username: dadosPerfil.username,
         instagramUrl: url,
         contato: contato || undefined,
         ...dadosCnpj
-      });
+      };
+
+      this.resultados.push(resultado);
+
+      // Enviar progresso em tempo real
+      if (this.config.onProgresso) {
+        this.config.onProgresso(resultado, atual, total);
+      }
 
       console.log('✅ Perfil processado com sucesso!');
 

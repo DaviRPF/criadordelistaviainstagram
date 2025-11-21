@@ -331,6 +331,8 @@
         // Verificar login ao carregar a página
         verificarLogin();
 
+        let resultadosAtuais = [];
+
         document.getElementById('prospectorForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -338,36 +340,75 @@
             const cidade = document.getElementById('cidade').value;
             const limite = document.getElementById('limite').value;
 
-            // Mostrar loading
+            // Limpar resultados anteriores
+            resultadosAtuais = [];
+
+            // Mostrar loading e resultados vazios
             document.getElementById('loading').classList.add('show');
+            document.getElementById('loading').querySelector('p:last-child').textContent = 'Iniciando prospecção...';
             document.getElementById('btnIniciar').disabled = true;
-            document.getElementById('results').classList.remove('show');
+            document.getElementById('results').classList.add('show');
+            document.getElementById('resultsContent').innerHTML = '<p>Processando...</p>';
+
+            // Fazer requisição POST para obter URL de SSE
+            const response = await fetch('/api/iniciar-prospeccao', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    tipoEstabelecimento,
+                    cidade,
+                    limite: limite || null
+                })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
 
             try {
-                const response = await fetch('/api/iniciar-prospeccao', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        tipoEstabelecimento,
-                        cidade,
-                        limite: limite || null
-                    })
-                });
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
 
-                const data = await response.json();
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n');
 
-                // Esconder loading
-                document.getElementById('loading').classList.remove('show');
-                document.getElementById('btnIniciar').disabled = false;
+                    for (const line of lines) {
+                        if (!line.trim() || !line.startsWith('data: ')) continue;
 
-                if (data.sucesso) {
-                    mostrarResultados(data.resultados);
-                } else {
-                    alert('Erro: ' + data.erro);
+                        try {
+                            const data = JSON.parse(line.replace('data: ', ''));
+
+                            if (data.tipo === 'progresso') {
+                                const { resultado, atual, total } = data.dados;
+                                resultadosAtuais.push(resultado);
+
+                                // Atualizar mensagem de loading
+                                document.getElementById('loading').querySelector('p:last-child').textContent =
+                                    `Processando estabelecimento ${atual} de ${total}...`;
+
+                                // Atualizar resultados em tempo real
+                                mostrarResultadosProgressivo(resultadosAtuais, atual, total);
+
+                            } else if (data.tipo === 'concluido') {
+                                // Esconder loading
+                                document.getElementById('loading').classList.remove('show');
+                                document.getElementById('btnIniciar').disabled = false;
+
+                                // Mostrar resultados finais
+                                mostrarResultadosProgressivo(resultadosAtuais, resultadosAtuais.length, resultadosAtuais.length);
+
+                            } else if (data.tipo === 'erro') {
+                                document.getElementById('loading').classList.remove('show');
+                                document.getElementById('btnIniciar').disabled = false;
+                                alert('Erro: ' + data.dados.erro);
+                            }
+                        } catch (e) {
+                            console.error('Erro ao processar evento:', e);
+                        }
+                    }
                 }
-
             } catch (error) {
                 console.error('Erro:', error);
                 document.getElementById('loading').classList.remove('show');
@@ -376,21 +417,20 @@
             }
         });
 
-        function mostrarResultados(resultados) {
-            const resultsDiv = document.getElementById('results');
+        function mostrarResultadosProgressivo(resultados, atual, total) {
             const content = document.getElementById('resultsContent');
 
             if (!resultados || resultados.length === 0) {
-                content.innerHTML = '<p>Nenhum resultado encontrado.</p>';
-                resultsDiv.classList.add('show');
+                content.innerHTML = '<p>Aguardando resultados...</p>';
                 return;
             }
 
             let html = `
-                <p><strong>Total de resultados:</strong> ${resultados.length}</p>
+                <p><strong>Progresso:</strong> ${atual} de ${total} estabelecimentos processados</p>
                 <table>
                     <thead>
                         <tr>
+                            <th>#</th>
                             <th>Nome</th>
                             <th>Username</th>
                             <th>Instagram</th>
@@ -402,9 +442,10 @@
                     <tbody>
             `;
 
-            resultados.forEach(resultado => {
+            resultados.forEach((resultado, index) => {
                 html += `
                     <tr>
+                        <td><strong>${index + 1}</strong></td>
                         <td>${resultado.nome || '-'}</td>
                         <td>@${resultado.username || '-'}</td>
                         <td><a href="${resultado.instagramUrl}" target="_blank">Ver perfil</a></td>
@@ -417,7 +458,6 @@
 
             html += '</tbody></table>';
             content.innerHTML = html;
-            resultsDiv.classList.add('show');
         }
     </script>
 </body>
