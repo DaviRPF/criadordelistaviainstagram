@@ -648,6 +648,11 @@ RESPOSTA (apenas o número ou NENHUM):`;
       });
 
       console.log('  ✅ Dados extraídos do Econodata');
+      console.log('     📋 Situação:', dados.situacao || 'N/A');
+      console.log('     📅 Ativa desde:', dados.ativaDesde || 'N/A');
+      console.log('     🏢 Tipo de unidade:', dados.tipoUnidade || 'N/A');
+      console.log('     📊 Enquadramento de porte:', dados.enquadramentoPorte || 'N/A');
+      console.log('     👥 Sócios/Administradores:', dados.sociosAdministradores.length > 0 ? dados.sociosAdministradores.join(', ') : 'N/A');
 
       return {
         cnpjUrl: url,
@@ -688,6 +693,11 @@ RESPOSTA (apenas o número ou NENHUM):`;
       });
 
       console.log('  ✅ Dados extraídos do CNPJBiz');
+      console.log('     📋 Situação:', dados.situacao || 'N/A');
+      console.log('     📅 Ativa desde:', dados.ativaDesde || 'N/A');
+      console.log('     🏢 Tipo de unidade:', dados.tipoUnidade || 'N/A');
+      console.log('     📊 Enquadramento de porte:', dados.enquadramentoPorte || 'N/A');
+      console.log('     👥 Sócios/Administradores:', dados.sociosAdministradores.length > 0 ? dados.sociosAdministradores.join(', ') : 'N/A');
 
       return {
         cnpjUrl: url,
