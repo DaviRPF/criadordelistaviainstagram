@@ -99,7 +99,7 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
       cidade,
       limite: limite ? parseInt(limite) : undefined,
       geminiApiKey: process.env.GEMINI_API_KEY!,
-      geminiModel: modeloIA || 'gemini-2.0-flash-exp',
+      geminiModel: modeloIA || 'gemini-2.5-flash-preview-05',
       twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
       instagramAuth,
       onProgresso: (resultado, atual, total) => {
