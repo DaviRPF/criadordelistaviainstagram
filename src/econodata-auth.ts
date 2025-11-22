@@ -58,7 +58,7 @@ export class EconodataAuth {
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
       console.log('📊 Acessando Econodata...');
-      await page.goto('https://www.econodata.com.br/login', {
+      await page.goto('https://plat.econodata.com.br', {
         waitUntil: 'networkidle2',
         timeout: 60000
       });
@@ -81,11 +81,15 @@ export class EconodataAuth {
             c.name.includes('session') ||
             c.name.includes('auth') ||
             c.name.includes('token') ||
-            c.name.toLowerCase().includes('econodata')
+            c.name.includes('jwt') ||
+            c.name.includes('access') ||
+            c.name.toLowerCase().includes('user')
           );
 
-          // Se não está mais na página de login e tem cookies de sessão
-          if (!url.includes('/login') && temCookiesSessao && cookies.length > 3) {
+          // Se não está na página de login/signin e tem cookies suficientes
+          const estaNaPaginaLogin = url.includes('/login') || url.includes('/signin') || url.includes('/auth');
+
+          if (!estaNaPaginaLogin && cookies.length > 5) {
             loginDetectado = true;
             clearInterval(intervalo);
 
