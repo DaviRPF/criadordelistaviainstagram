@@ -58,13 +58,14 @@ export class EconodataAuth {
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
       console.log('📊 Acessando Econodata...');
-      await page.goto('https://plat.econodata.com.br', {
+      // Abrir página de uma empresa para ter acesso ao botão de login normal
+      await page.goto('https://www.econodata.com.br/consulta-empresa/00000000000191-banco-do-brasil-sa', {
         waitUntil: 'networkidle2',
         timeout: 60000
       });
 
       console.log('');
-      console.log('👤 Faça login manualmente no navegador que foi aberto.');
+      console.log('👤 Clique em "Entrar" no canto superior direito e faça login.');
       console.log('⏳ Aguardando você fazer login...');
       console.log('💡 Quando o login for detectado, os cookies serão salvos automaticamente.');
       console.log('');
