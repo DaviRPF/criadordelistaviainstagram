@@ -540,6 +540,8 @@ Responda APENAS com uma palavra: "SIM" se tem WhatsApp ou "NAO" se não tem.`;
 
     let paginaAtual = 1;
     let contadorResultados = 0;
+    let resultadosConsecutivosSemInstagram = 0;
+    const limiteConsecutivosSemInstagram = 3; // Se 3 resultados seguidos não forem Instagram, para
 
     while (true) {
       console.log('');
@@ -562,6 +564,7 @@ Responda APENAS com uma palavra: "SIM" se tem WhatsApp ou "NAO" se não tem.`;
 
         if (ehInstagram) {
           console.log('     ✅ É do Instagram!');
+          resultadosConsecutivosSemInstagram = 0; // Reset do contador
 
           // Extrair username da URL (ULTRA RÁPIDO, SEM IA)
           const username = this.extrairUsernameUrl(link.url);
@@ -613,11 +616,21 @@ Responda APENAS com uma palavra: "SIM" se tem WhatsApp ou "NAO" se não tem.`;
             console.error('     ❌ Erro ao processar perfil:', error.message);
           }
         } else {
-          console.log('     ⏭️  Não é do Instagram, pulando...');
+          console.log('     ⏭️  Não é do Instagram');
+          resultadosConsecutivosSemInstagram++;
+
+          // Se muitos resultados consecutivos não são Instagram, acabou
+          if (resultadosConsecutivosSemInstagram >= limiteConsecutivosSemInstagram) {
+            console.log('');
+            console.log(`⚠️  ${limiteConsecutivosSemInstagram} resultados consecutivos não são do Instagram.`);
+            console.log('🏁 Provavelmente acabaram os resultados dessa cidade. Finalizando...');
+            this.cache.salvar();
+            return;
+          }
         }
       }
 
-      // Se não tem mais Instagram, parar
+      // Se não tem mais Instagram na página inteira, parar
       if (!temMaisInstagram) {
         console.log('');
         console.log('⚠️  Não há mais resultados do Instagram. Finalizando...');
