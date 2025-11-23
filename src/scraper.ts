@@ -541,7 +541,7 @@ Responda APENAS com uma palavra: "SIM" se tem WhatsApp ou "NAO" se não tem.`;
     let paginaAtual = 1;
     let contadorResultados = 0;
     let resultadosConsecutivosSemInstagram = 0;
-    const limiteConsecutivosSemInstagram = 3; // Se 3 resultados seguidos não forem Instagram, para
+    const limiteConsecutivosSemInstagram = 2; // Se 2 resultados seguidos não forem Instagram, para
 
     while (true) {
       console.log('');
