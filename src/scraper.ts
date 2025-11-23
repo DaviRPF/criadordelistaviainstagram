@@ -135,9 +135,6 @@ export class ProspectorScraper {
       await this.buscarNoGoogle();
       await this.fecharBrowser();
 
-      // Salvar cache
-      this.cache.salvar();
-
       console.log('');
       console.log('✅ Scraper finalizado com sucesso!');
       console.log(`📊 Total de resultados: ${this.resultados.length}`);
@@ -151,8 +148,6 @@ export class ProspectorScraper {
     } catch (error: any) {
       console.error('❌ Erro fatal no scraper:', error.message);
       await this.fecharBrowser();
-      // Salvar cache mesmo em caso de erro
-      this.cache.salvar();
       throw error;
     }
   }
@@ -385,9 +380,6 @@ export class ProspectorScraper {
             await this.processarPerfilInstagram(link.url, contadorResultados, total);
             temMaisInstagram = true;
 
-            // Adicionar ao cache após processar com sucesso
-            this.cache.adicionar(username);
-
             // Enviar estatísticas
             if (this.config.onEstatisticas) {
               this.config.onEstatisticas(this.empresasPuladas, this.empresasNovas);
@@ -397,7 +389,6 @@ export class ProspectorScraper {
             if (this.config.limite && contadorResultados >= this.config.limite) {
               console.log('');
               console.log(`🎯 Limite de ${this.config.limite} resultados atingido!`);
-              this.cache.salvar(); // Salvar cache antes de sair
               return;
             }
           } catch (error: any) {
