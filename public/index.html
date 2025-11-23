@@ -877,8 +877,9 @@
 
                                 <!-- Contatos -->
                                 <th class="group-contatos">Telefone Bio</th>
+                                <th class="group-contatos">WhatsApp Bio</th>
                                 <th class="group-contatos">Linktree</th>
-                                <th class="group-contatos">WhatsApp</th>
+                                <th class="group-contatos">WhatsApp Linktree</th>
                                 <th class="group-contatos">Site Bio</th>
                                 <th class="group-contatos">Site Linktree</th>
 
@@ -935,6 +936,7 @@
 
                         <!-- Contatos -->
                         <td class="group-contatos">${resultado.contato ? `<span class="badge">📱 ${resultado.contato}${resultado.contatoTemWhatsApp === true ? ' ✅WA' : resultado.contatoTemWhatsApp === false ? ' ❌WA' : ''}</span>` : '-'}</td>
+                        <td class="group-contatos">${resultado.whatsappBio ? `<a href="${resultado.whatsappBio}" target="_blank">💬 ${resultado.numeroWhatsappBio || 'Ver'}</a>` : '-'}</td>
                         <td class="group-contatos">${resultado.linkTree ? `<a href="${resultado.linkTree}" target="_blank">🌳 Ver</a>` : '-'}</td>
                         <td class="group-contatos">${whatsappLinktree}</td>
                         <td class="group-contatos">${resultado.siteProprio ? `<a href="${resultado.siteProprio}" target="_blank">🌐 Ver</a>` : '-'}</td>
@@ -976,6 +978,8 @@
                 'Instagram URL',
                 'Telefone Bio',
                 'Tel Bio Tem WhatsApp',
+                'WhatsApp Bio (Link)',
+                'WhatsApp Bio (Número)',
                 'Linktree',
                 'WhatsApp Linktree',
                 'Número WhatsApp Linktree',
@@ -1009,6 +1013,8 @@
                     resultado.instagramUrl || '',
                     resultado.contato || '',
                     resultado.contatoTemWhatsApp === true ? 'Sim' : resultado.contatoTemWhatsApp === false ? 'Não' : '',
+                    resultado.whatsappBio || '',
+                    resultado.numeroWhatsappBio || '',
                     resultado.linkTree || '',
                     resultado.whatsappLinkTree || '',
                     resultado.numeroWhatsappLinkTree || '',
@@ -1068,9 +1074,10 @@
 
                 txt += '💬 CONTATOS:\n';
                 txt += `   Telefone Bio: ${resultado.contato || 'N/A'}${resultado.contatoTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.contatoTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
+                txt += `   WhatsApp Bio: ${resultado.whatsappBio || 'N/A'}${resultado.numeroWhatsappBio ? ` (${resultado.numeroWhatsappBio})` : ''}\n`;
                 txt += `   Linktree: ${resultado.linkTree || 'N/A'}\n`;
                 txt += `   WhatsApp Linktree: ${resultado.whatsappLinkTree || 'N/A'}\n`;
-                txt += `   Número WhatsApp: ${resultado.numeroWhatsappLinkTree || 'N/A'}\n`;
+                txt += `   Número WhatsApp Linktree: ${resultado.numeroWhatsappLinkTree || 'N/A'}\n`;
                 txt += `   Site Próprio (Bio): ${resultado.siteProprio || 'N/A'}\n`;
                 txt += `   Site Próprio (Linktree): ${resultado.siteProprioLinktree || 'N/A'}\n\n`;
 

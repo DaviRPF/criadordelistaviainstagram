@@ -25,6 +25,8 @@ interface Resultado {
   instagramUrl: string;
   contato?: string;
   contatoTemWhatsApp?: boolean;
+  whatsappBio?: string;
+  numeroWhatsappBio?: string;
   linkTree?: string;
   siteProprio?: string;
   siteProprioLinktree?: string;
@@ -159,6 +161,66 @@ export class ProspectorScraper {
     }
 
     return apenasNumeros;
+  }
+
+  // Extrair link de WhatsApp da bio do Instagram
+  private extrairWhatsAppDaBio(bio: string): { link: string | null, numero: string | null } {
+    if (!bio) return { link: null, numero: null };
+
+    // Padrões de links de WhatsApp
+    const padroes = [
+      // wa.me/5511999999999 ou wa.me/5511999999999?text=...
+      /(?:https?:\/\/)?(?:www\.)?wa\.me\/(\d+)(?:\?[^\s]*)?/gi,
+      // api.whatsapp.com/send?phone=5511999999999
+      /(?:https?:\/\/)?(?:www\.)?api\.whatsapp\.com\/send\?phone=(\d+)(?:&[^\s]*)?/gi,
+      // whatsapp.com/send?phone=5511999999999
+      /(?:https?:\/\/)?(?:www\.)?whatsapp\.com\/send\?phone=(\d+)(?:&[^\s]*)?/gi,
+      // chat.whatsapp.com (grupos - não tem número, mas é WhatsApp)
+      /(?:https?:\/\/)?(?:www\.)?chat\.whatsapp\.com\/[^\s]+/gi,
+    ];
+
+    for (const padrao of padroes) {
+      const match = bio.match(padrao);
+      if (match && match[0]) {
+        let link = match[0];
+
+        // Garantir que tem https://
+        if (!link.startsWith('http')) {
+          link = 'https://' + link;
+        }
+
+        // Extrair número do link
+        const numeroMatch = link.match(/(\d{10,15})/);
+        const numero = numeroMatch ? numeroMatch[1] : null;
+
+        console.log(`     💬 Link WhatsApp encontrado na bio: ${link}`);
+        if (numero) {
+          console.log(`     📱 Número extraído: ${numero}`);
+        }
+
+        return { link, numero };
+      }
+    }
+
+    // Tentar encontrar menção de WhatsApp com número na bio
+    // Ex: "WhatsApp: 11 99999-9999" ou "Zap: (11) 99999-9999"
+    const padraoTexto = /(?:whatsapp|whats|wpp|zap|zapzap)[\s:]*[\(]?(\d{2})[\)]?[\s.-]?(\d{4,5})[\s.-]?(\d{4})/gi;
+    const matchTexto = bio.match(padraoTexto);
+
+    if (matchTexto && matchTexto[0]) {
+      // Extrair apenas números
+      const apenasNumeros = matchTexto[0].replace(/\D/g, '');
+      if (apenasNumeros.length >= 10) {
+        const numeroFormatado = this.formatarNumeroWhatsApp(apenasNumeros);
+        if (numeroFormatado) {
+          const link = `https://wa.me/${numeroFormatado}`;
+          console.log(`     💬 WhatsApp encontrado no texto da bio: ${link}`);
+          return { link, numero: numeroFormatado };
+        }
+      }
+    }
+
+    return { link: null, numero: null };
   }
 
   // Verificar se um número de telefone tem WhatsApp
@@ -690,6 +752,11 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         return;
       }
 
+      // Extrair link de WhatsApp direto da bio (wa.me, api.whatsapp.com, etc)
+      const whatsappDaBio = this.extrairWhatsAppDaBio(dadosPerfil.bio);
+      let whatsappBio: string | undefined = whatsappDaBio.link || undefined;
+      let numeroWhatsappBio: string | undefined = whatsappDaBio.numero || undefined;
+
       // Verificar contato na bio usando IA
       const contato = await this.extrairContatoDaBio(dadosPerfil.bio);
       let contatoTemWhatsApp: boolean | undefined = undefined;
@@ -755,6 +822,8 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         instagramUrl: url,
         contato: contato || undefined,
         contatoTemWhatsApp: contatoTemWhatsApp,
+        whatsappBio: whatsappBio,
+        numeroWhatsappBio: numeroWhatsappBio,
         linkTree: linkTree || undefined,
         siteProprio: siteProprio || undefined,
         siteProprioLinktree: siteProprioLinktree,
