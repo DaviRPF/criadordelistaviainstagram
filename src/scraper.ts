@@ -135,6 +135,9 @@ export class ProspectorScraper {
       await this.buscarNoGoogle();
       await this.fecharBrowser();
 
+      // Salvar histórico
+      this.cache.salvar();
+
       console.log('');
       console.log('✅ Scraper finalizado com sucesso!');
       console.log(`📊 Total de resultados: ${this.resultados.length}`);
@@ -148,6 +151,7 @@ export class ProspectorScraper {
     } catch (error: any) {
       console.error('❌ Erro fatal no scraper:', error.message);
       await this.fecharBrowser();
+      this.cache.salvar(); // Salvar histórico mesmo em caso de erro
       throw error;
     }
   }
@@ -161,6 +165,7 @@ export class ProspectorScraper {
   getEstatisticasCache() {
     return {
       total: this.cache.getTotal(),
+      totalParaPular: this.cache.getTotalParaPular(),
       puladas: this.empresasPuladas,
       novas: this.empresasNovas
     };
@@ -380,6 +385,9 @@ export class ProspectorScraper {
             await this.processarPerfilInstagram(link.url, contadorResultados, total);
             temMaisInstagram = true;
 
+            // Adicionar ao histórico (não afeta a lista de pular)
+            this.cache.adicionar(username);
+
             // Enviar estatísticas
             if (this.config.onEstatisticas) {
               this.config.onEstatisticas(this.empresasPuladas, this.empresasNovas);
@@ -389,6 +397,7 @@ export class ProspectorScraper {
             if (this.config.limite && contadorResultados >= this.config.limite) {
               console.log('');
               console.log(`🎯 Limite de ${this.config.limite} resultados atingido!`);
+              this.cache.salvar(); // Salvar histórico
               return;
             }
           } catch (error: any) {
