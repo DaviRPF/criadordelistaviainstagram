@@ -164,50 +164,45 @@ export class ProspectorScraper {
   }
 
   // Extrair link de WhatsApp da bio do Instagram
+  // Sempre retorna no formato wa.me/{numero} pronto para clicar
   private extrairWhatsAppDaBio(bio: string): { link: string | null, numero: string | null } {
     if (!bio) return { link: null, numero: null };
 
-    // Padrões de links de WhatsApp
+    // Padrões de links de WhatsApp (para extrair o número)
     const padroes = [
       // wa.me/5511999999999 ou wa.me/5511999999999?text=...
-      /(?:https?:\/\/)?(?:www\.)?wa\.me\/(\d+)(?:\?[^\s]*)?/gi,
+      /(?:https?:\/\/)?(?:www\.)?wa\.me\/(\d+)/gi,
       // api.whatsapp.com/send?phone=5511999999999
-      /(?:https?:\/\/)?(?:www\.)?api\.whatsapp\.com\/send\?phone=(\d+)(?:&[^\s]*)?/gi,
+      /(?:https?:\/\/)?(?:www\.)?api\.whatsapp\.com\/send\?phone=(\d+)/gi,
       // whatsapp.com/send?phone=5511999999999
-      /(?:https?:\/\/)?(?:www\.)?whatsapp\.com\/send\?phone=(\d+)(?:&[^\s]*)?/gi,
-      // chat.whatsapp.com (grupos - não tem número, mas é WhatsApp)
-      /(?:https?:\/\/)?(?:www\.)?chat\.whatsapp\.com\/[^\s]+/gi,
+      /(?:https?:\/\/)?(?:www\.)?whatsapp\.com\/send\?phone=(\d+)/gi,
     ];
 
     for (const padrao of padroes) {
-      const match = bio.match(padrao);
-      if (match && match[0]) {
-        let link = match[0];
+      const match = padrao.exec(bio);
+      if (match && match[1]) {
+        // Extrair o número do grupo de captura
+        const numeroExtraido = match[1];
 
-        // Garantir que tem https://
-        if (!link.startsWith('http')) {
-          link = 'https://' + link;
+        // Formatar o número corretamente
+        const numeroFormatado = this.formatarNumeroWhatsApp(numeroExtraido);
+
+        if (numeroFormatado) {
+          const linkPadronizado = `https://wa.me/${numeroFormatado}`;
+          console.log(`     💬 WhatsApp encontrado na bio: ${linkPadronizado}`);
+          return { link: linkPadronizado, numero: numeroFormatado };
         }
-
-        // Extrair número do link
-        const numeroMatch = link.match(/(\d{10,15})/);
-        const numero = numeroMatch ? numeroMatch[1] : null;
-
-        console.log(`     💬 Link WhatsApp encontrado na bio: ${link}`);
-        if (numero) {
-          console.log(`     📱 Número extraído: ${numero}`);
-        }
-
-        return { link, numero };
       }
+      // Reset do lastIndex para regex global
+      padrao.lastIndex = 0;
     }
 
     // Tentar encontrar menção de WhatsApp com número na bio
     // Ex: "WhatsApp: 11 99999-9999" ou "Zap: (11) 99999-9999"
     const padraoTexto = /(?:whatsapp|whats|wpp|zap|zapzap)[\s:]*[\(]?(\d{2})[\)]?[\s.-]?(\d{4,5})[\s.-]?(\d{4})/gi;
-    const matchTexto = bio.match(padraoTexto);
+    const matchTexto = padraoTexto.exec(bio);
 
-    if (matchTexto && matchTexto[0]) {
+    if (matchTexto) {
       // Extrair apenas números
       const apenasNumeros = matchTexto[0].replace(/\D/g, '');
       if (apenasNumeros.length >= 10) {
