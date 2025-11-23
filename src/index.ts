@@ -120,7 +120,7 @@ app.post('/api/importar-cache', async (req, res) => {
       tipoEstabelecimento: '',
       cidade: '',
       geminiApiKey: process.env.GEMINI_API_KEY!,
-      geminiModel: 'gemini-2.5-flash-preview-05',
+      geminiModel: 'gemini-2.5-flash',
       twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
       instagramAuth,
       econodataAuth
@@ -173,7 +173,7 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
       cidade,
       limite: limite ? parseInt(limite) : undefined,
       geminiApiKey: process.env.GEMINI_API_KEY!,
-      geminiModel: modeloIA || 'gemini-2.5-flash-preview-05',
+      geminiModel: modeloIA || 'gemini-2.5-flash',
       twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
       instagramAuth,
       econodataAuth,
