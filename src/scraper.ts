@@ -24,6 +24,7 @@ interface Resultado {
   username: string;
   instagramUrl: string;
   contato?: string;
+  contatoTemWhatsApp?: boolean;
   linkTree?: string;
   siteProprio?: string;
   siteProprioLinktree?: string;
@@ -38,6 +39,7 @@ interface Resultado {
   sociosAdministradores?: string[];
   linkGMB?: string;
   telefoneGMB?: string;
+  telefoneGMBTemWhatsApp?: boolean;
   horarioFuncionamento?: string;
 }
 
@@ -79,6 +81,84 @@ export class ProspectorScraper {
 
     // Adiciona https://
     return 'https://' + urlTrimmed;
+  }
+
+  // Verificar se um número de telefone tem WhatsApp
+  private async verificarWhatsApp(numero: string): Promise<boolean | null> {
+    if (!this.browser || !numero) return null;
+
+    console.log(`     📱 Verificando se ${numero} tem WhatsApp...`);
+
+    // Extrair apenas números
+    const apenasNumeros = numero.replace(/\D/g, '');
+
+    if (apenasNumeros.length < 10) {
+      console.log('     ⚠️  Número muito curto para verificar');
+      return null;
+    }
+
+    // Adicionar código do Brasil se não tiver
+    let numeroFormatado = apenasNumeros;
+    if (!numeroFormatado.startsWith('55') && numeroFormatado.length <= 11) {
+      numeroFormatado = '55' + numeroFormatado;
+    }
+
+    const waUrl = `https://wa.me/${numeroFormatado}`;
+    console.log(`     🔗 Abrindo ${waUrl}...`);
+
+    const page = await this.browser.newPage();
+
+    try {
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      await page.goto(waUrl, { waitUntil: 'networkidle2', timeout: 15000 });
+
+      // Esperar um pouco para a página carregar
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Extrair o conteúdo da página
+      const conteudoPagina = await page.evaluate(() => {
+        return document.body.innerText || '';
+      });
+
+      // Também pegar a URL final (pode ter redirecionado)
+      const urlFinal = page.url();
+
+      await page.close();
+
+      // Usar IA para analisar se o número tem WhatsApp
+      const prompt = `Analise o conteúdo abaixo de uma página wa.me (WhatsApp) e determine se o número de telefone TEM ou NÃO TEM WhatsApp.
+
+URL acessada: ${waUrl}
+URL final (após redirecionamento): ${urlFinal}
+
+Conteúdo da página:
+"${conteudoPagina.substring(0, 1500)}"
+
+INDICADORES DE QUE TEM WHATSAPP:
+- Página mostra botão para "Continuar para o chat" ou "Continue to chat"
+- Página mostra "Message this phone number" ou "Enviar mensagem"
+- Página pede para abrir no WhatsApp
+- URL final contém "send" ou "chat"
+
+INDICADORES DE QUE NÃO TEM WHATSAPP:
+- Mensagem de erro como "número inválido" ou "invalid phone number"
+- Página mostra "This phone number is not on WhatsApp"
+- Página mostra erro ou não encontrado
+
+Responda APENAS com uma palavra: "SIM" se tem WhatsApp ou "NAO" se não tem.`;
+
+      const resposta = await this.chamarIAComRetry(prompt);
+      const temWhatsApp = resposta.trim().toUpperCase().includes('SIM');
+
+      console.log(`     📱 Resultado: ${temWhatsApp ? '✅ Tem WhatsApp' : '❌ Não tem WhatsApp'}`);
+
+      return temWhatsApp;
+
+    } catch (error: any) {
+      console.error('     ⚠️  Erro ao verificar WhatsApp:', error.message);
+      await page.close();
+      return null;
+    }
   }
 
   // Extrair username da URL do Instagram (SEM IA, ultra rápido)
@@ -540,8 +620,14 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
 
       // Verificar contato na bio usando IA
       const contato = await this.extrairContatoDaBio(dadosPerfil.bio);
+      let contatoTemWhatsApp: boolean | undefined = undefined;
       if (contato) {
         console.log('     📞 Contato encontrado:', contato);
+        // Verificar se o contato tem WhatsApp
+        const temWA = await this.verificarWhatsApp(contato);
+        if (temWA !== null) {
+          contatoTemWhatsApp = temWA;
+        }
       }
 
       // Extrair links (Linktree/Site próprio) da bio usando IA
@@ -581,12 +667,22 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         this.config.cidade
       );
 
+      // Verificar se o telefone do GMB tem WhatsApp
+      let telefoneGMBTemWhatsApp: boolean | undefined = undefined;
+      if (dadosGMB.telefoneGMB) {
+        const temWA = await this.verificarWhatsApp(dadosGMB.telefoneGMB);
+        if (temWA !== null) {
+          telefoneGMBTemWhatsApp = temWA;
+        }
+      }
+
       // Salvar resultado
       const resultado: Resultado = {
         nome: nomeReal,
         username: dadosPerfil.username,
         instagramUrl: url,
         contato: contato || undefined,
+        contatoTemWhatsApp: contatoTemWhatsApp,
         linkTree: linkTree || undefined,
         siteProprio: siteProprio || undefined,
         siteProprioLinktree: siteProprioLinktree,
@@ -595,6 +691,7 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         ...dadosCnpj,
         linkGMB: dadosGMB.linkGMB || undefined,
         telefoneGMB: dadosGMB.telefoneGMB || undefined,
+        telefoneGMBTemWhatsApp: telefoneGMBTemWhatsApp,
         horarioFuncionamento: dadosGMB.horarioFuncionamento || undefined
       };
 

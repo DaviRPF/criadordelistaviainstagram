@@ -934,7 +934,7 @@
                         <td class="group-instagram"><a href="${resultado.instagramUrl}" target="_blank">🔗 Perfil</a></td>
 
                         <!-- Contatos -->
-                        <td class="group-contatos">${resultado.contato ? `<span class="badge">📱 ${resultado.contato}</span>` : '-'}</td>
+                        <td class="group-contatos">${resultado.contato ? `<span class="badge">📱 ${resultado.contato}${resultado.contatoTemWhatsApp === true ? ' ✅WA' : resultado.contatoTemWhatsApp === false ? ' ❌WA' : ''}</span>` : '-'}</td>
                         <td class="group-contatos">${resultado.linkTree ? `<a href="${resultado.linkTree}" target="_blank">🌳 Ver</a>` : '-'}</td>
                         <td class="group-contatos">${whatsappLinktree}</td>
                         <td class="group-contatos">${resultado.siteProprio ? `<a href="${resultado.siteProprio}" target="_blank">🌐 Ver</a>` : '-'}</td>
@@ -951,7 +951,7 @@
 
                         <!-- Google Meu Negócio -->
                         <td class="group-gmb">${resultado.linkGMB ? `<a href="${resultado.linkGMB}" target="_blank">🔗 Ver GMB</a>` : '-'}</td>
-                        <td class="group-gmb">${resultado.telefoneGMB ? `📞 ${resultado.telefoneGMB}` : '-'}</td>
+                        <td class="group-gmb">${resultado.telefoneGMB ? `📞 ${resultado.telefoneGMB}${resultado.telefoneGMBTemWhatsApp === true ? ' ✅WA' : resultado.telefoneGMBTemWhatsApp === false ? ' ❌WA' : ''}` : '-'}</td>
                         <td class="group-gmb" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${resultado.horarioFuncionamento || ''}">${resultado.horarioFuncionamento || '-'}</td>
                     </tr>
                 `;
@@ -975,6 +975,7 @@
                 'Username',
                 'Instagram URL',
                 'Telefone Bio',
+                'Tel Bio Tem WhatsApp',
                 'Linktree',
                 'WhatsApp Linktree',
                 'Número WhatsApp Linktree',
@@ -989,6 +990,7 @@
                 'CNPJ URL',
                 'Link GMB',
                 'Telefone GMB',
+                'Tel GMB Tem WhatsApp',
                 'Horário Funcionamento'
             ];
 
@@ -1006,6 +1008,7 @@
                     '"' + (resultado.username || '') + '"',
                     resultado.instagramUrl || '',
                     resultado.contato || '',
+                    resultado.contatoTemWhatsApp === true ? 'Sim' : resultado.contatoTemWhatsApp === false ? 'Não' : '',
                     resultado.linkTree || '',
                     resultado.whatsappLinkTree || '',
                     resultado.numeroWhatsappLinkTree || '',
@@ -1020,6 +1023,7 @@
                     resultado.cnpjUrl || '',
                     resultado.linkGMB || '',
                     resultado.telefoneGMB || '',
+                    resultado.telefoneGMBTemWhatsApp === true ? 'Sim' : resultado.telefoneGMBTemWhatsApp === false ? 'Não' : '',
                     '"' + (resultado.horarioFuncionamento || '') + '"'
                 ];
 
@@ -1063,7 +1067,7 @@
                 txt += `   Perfil: ${resultado.instagramUrl || 'N/A'}\n\n`;
 
                 txt += '💬 CONTATOS:\n';
-                txt += `   Telefone Bio: ${resultado.contato || 'N/A'}\n`;
+                txt += `   Telefone Bio: ${resultado.contato || 'N/A'}${resultado.contatoTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.contatoTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
                 txt += `   Linktree: ${resultado.linkTree || 'N/A'}\n`;
                 txt += `   WhatsApp Linktree: ${resultado.whatsappLinkTree || 'N/A'}\n`;
                 txt += `   Número WhatsApp: ${resultado.numeroWhatsappLinkTree || 'N/A'}\n`;
@@ -1090,7 +1094,7 @@
 
                 txt += '📍 GOOGLE MEU NEGÓCIO:\n';
                 txt += `   Link GMB: ${resultado.linkGMB || 'N/A'}\n`;
-                txt += `   Telefone: ${resultado.telefoneGMB || 'N/A'}\n`;
+                txt += `   Telefone: ${resultado.telefoneGMB || 'N/A'}${resultado.telefoneGMBTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.telefoneGMBTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
                 txt += `   Horário de Funcionamento: ${resultado.horarioFuncionamento || 'N/A'}\n\n`;
             });
 
