@@ -61,13 +61,24 @@ export class PlanilhaProcessor {
 
   // Ler planilha xlsx/xls
   lerPlanilha(buffer: Buffer): EmpresaPlanilha[] {
+    console.log('');
+    console.log('📂 ========== LEITURA DA PLANILHA ==========');
+    console.log(`📁 Tamanho do buffer: ${(buffer.length / 1024).toFixed(2)} KB`);
+
     const workbook = XLSX.read(buffer, { type: 'buffer' });
+    console.log(`📑 Abas encontradas: ${workbook.SheetNames.join(', ')}`);
+
     const sheetName = workbook.SheetNames[0];
+    console.log(`📄 Usando aba: "${sheetName}"`);
+
     const sheet = workbook.Sheets[sheetName];
     const dados = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+    console.log(`📊 Total de linhas na planilha: ${dados.length}`);
 
     // Primeira linha é o cabeçalho
     const headers = dados[0] as string[];
+    console.log(`📋 Cabeçalhos encontrados: ${headers.filter(h => h).join(' | ')}`);
+
     const empresas: EmpresaPlanilha[] = [];
 
     // Mapear índices das colunas
@@ -94,6 +105,14 @@ export class PlanilhaProcessor {
     const idxCep = getIndex('cep');
     const idxNatureza = getIndex('natureza');
     const idxQuadro = getIndex('quadro');
+
+    console.log('🔍 Mapeamento de colunas:');
+    console.log(`   - Nome Fantasia: coluna ${idxNomeFantasia >= 0 ? idxNomeFantasia : '❌ NÃO ENCONTRADA'}`);
+    console.log(`   - Razão Social: coluna ${idxRazaoSocial >= 0 ? idxRazaoSocial : '❌ NÃO ENCONTRADA'}`);
+    console.log(`   - CNPJ: coluna ${idxCnpj >= 0 ? idxCnpj : '❌ NÃO ENCONTRADA'}`);
+    console.log(`   - Telefone: coluna ${idxTelefone >= 0 ? idxTelefone : '❌ NÃO ENCONTRADA'}`);
+    console.log(`   - Município: coluna ${idxMunicipio >= 0 ? idxMunicipio : '❌ NÃO ENCONTRADA'}`);
+    console.log(`   - UF: coluna ${idxUf >= 0 ? idxUf : '❌ NÃO ENCONTRADA'}`);
 
     // Processar linhas (pular cabeçalho)
     for (let i = 1; i < dados.length; i++) {
@@ -129,7 +148,12 @@ export class PlanilhaProcessor {
       });
     }
 
-    console.log(`📊 Planilha carregada: ${empresas.length} empresas encontradas`);
+    console.log('');
+    console.log(`✅ Planilha carregada com sucesso!`);
+    console.log(`📊 Total de empresas válidas: ${empresas.length}`);
+    console.log(`⏭️  Linhas ignoradas (sem razão social/cnpj): ${dados.length - 1 - empresas.length}`);
+    console.log('📂 ==========================================');
+    console.log('');
     return empresas;
   }
 
@@ -179,13 +203,18 @@ Retorne APENAS o nome, nada mais.`;
     const query = `${nomeEmpresa} ${cidade || ''} instagram`.trim();
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
-    console.log(`     🔎 Buscando: "${query}"`);
+    console.log(`     🔎 [GOOGLE] Buscando Instagram...`);
+    console.log(`        Query: "${query}"`);
+    console.log(`        URL: ${googleUrl}`);
 
     try {
+      console.log(`        ⏳ Navegando para Google...`);
       await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      console.log(`        ✅ Página carregada`);
       await page.waitForTimeout(2000);
 
       // Extrair resultados
+      console.log(`        🔍 Extraindo resultados da busca...`);
       const resultados = await page.evaluate(() => {
         const links: { titulo: string; url: string }[] = [];
         const elementos = document.querySelectorAll('div.g a[href]');
@@ -201,21 +230,30 @@ Retorne APENAS o nome, nada mais.`;
         return links.slice(0, 10);
       });
 
+      console.log(`        📋 ${resultados.length} resultados encontrados`);
+
+      // Listar resultados para debug
+      resultados.forEach((r, idx) => {
+        const isInsta = r.url.includes('instagram.com') ? '📱' : '  ';
+        console.log(`        ${isInsta} [${idx + 1}] ${r.titulo.substring(0, 40)}... -> ${r.url.substring(0, 60)}...`);
+      });
+
       // Procurar resultado do Instagram
       for (const resultado of resultados) {
         if (resultado.url.includes('instagram.com') &&
             !resultado.url.includes('/explore') &&
             !resultado.url.includes('/accounts')) {
-          console.log(`     ✅ Instagram encontrado: ${resultado.url}`);
+          console.log(`     ✅ [GOOGLE] Instagram encontrado: ${resultado.url}`);
           return resultado.url;
         }
       }
 
-      console.log('     ❌ Instagram não encontrado');
+      console.log('     ❌ [GOOGLE] Nenhum perfil do Instagram encontrado nos resultados');
       return null;
 
     } catch (error: any) {
-      console.error('     ⚠️  Erro ao buscar no Google:', error.message);
+      console.error(`     ⚠️  [GOOGLE] ERRO: ${error.message}`);
+      console.error(`        Stack: ${error.stack?.split('\n')[1] || 'N/A'}`);
       return null;
     }
   }
@@ -229,9 +267,16 @@ Retorne APENAS o nome, nada mais.`;
     siteProprioBio?: string;
     linkTreeBio?: string;
   } | null> {
+    console.log(`     📱 [INSTAGRAM] Processando perfil...`);
+    console.log(`        URL: ${url}`);
+
     try {
+      console.log(`        🍪 Aplicando cookies do Instagram...`);
       await this.config.instagramAuth.aplicarCookies(page);
+
+      console.log(`        ⏳ Navegando para o perfil...`);
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+      console.log(`        ✅ Página carregada`);
       await page.waitForTimeout(3000);
 
       // Verificar se está no login
@@ -240,11 +285,13 @@ Retorne APENAS o nome, nada mais.`;
       });
 
       if (estaNoLogin) {
-        console.log('     ⚠️  Instagram redirecionou para login');
+        console.log('     ⚠️  [INSTAGRAM] PROBLEMA: Redirecionou para login!');
+        console.log('        💡 Dica: Faça login no Instagram novamente na interface web');
         return null;
       }
 
       // Extrair dados
+      console.log(`        🔍 Extraindo dados do perfil...`);
       const dados = await page.evaluate(() => {
         const username = window.location.pathname.split('/').filter(Boolean)[0] || '';
 
@@ -256,14 +303,26 @@ Retorne APENAS o nome, nada mais.`;
         return { username, bio };
       });
 
-      console.log(`     📱 Username: @${dados.username}`);
-      console.log(`     📝 Bio: ${dados.bio.substring(0, 80)}...`);
+      console.log(`        👤 Username extraído: @${dados.username}`);
+      console.log(`        📝 Bio completa: "${dados.bio || '(vazia)'}"`);
 
       // Extrair WhatsApp da bio
+      console.log(`        🔍 Buscando WhatsApp na bio...`);
       const whatsappInfo = this.extrairWhatsAppDaBio(dados.bio);
+      if (whatsappInfo.link) {
+        console.log(`        ✅ WhatsApp encontrado: ${whatsappInfo.link}`);
+      } else {
+        console.log(`        ❌ WhatsApp não encontrado na bio`);
+      }
 
       // Extrair contato e links da bio usando IA
+      console.log(`        🤖 Usando IA para extrair contatos/links da bio...`);
       const linksInfo = await this.extrairLinksDaBio(dados.bio);
+      console.log(`        📞 Contato: ${linksInfo.contato || 'não encontrado'}`);
+      console.log(`        🌐 Site: ${linksInfo.site || 'não encontrado'}`);
+      console.log(`        🌳 Linktree: ${linksInfo.linktree || 'não encontrado'}`);
+
+      console.log(`     ✅ [INSTAGRAM] Perfil processado com sucesso!`);
 
       return {
         username: dados.username,
@@ -275,7 +334,8 @@ Retorne APENAS o nome, nada mais.`;
       };
 
     } catch (error: any) {
-      console.error('     ⚠️  Erro ao processar Instagram:', error.message);
+      console.error(`     ⚠️  [INSTAGRAM] ERRO: ${error.message}`);
+      console.error(`        Stack: ${error.stack?.split('\n')[1] || 'N/A'}`);
       return null;
     }
   }
@@ -388,11 +448,17 @@ Retorne em JSON:
     const query = `${nomeEmpresa} ${cidade || ''}`.trim();
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
+    console.log(`     📍 [GMB] Buscando Google Meu Negócio...`);
+    console.log(`        Query: "${query}"`);
+
     try {
+      console.log(`        ⏳ Navegando para Google...`);
       await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      console.log(`        ✅ Página carregada`);
       await page.waitForTimeout(2000);
 
       // Extrair dados do painel de conhecimento (GMB)
+      console.log(`        🔍 Procurando painel de conhecimento (GMB)...`);
       const dadosGMB = await page.evaluate(() => {
         // Procurar telefone
         const telefoneEl = document.querySelector('[data-dtype="d3ph"] span') ||
@@ -410,6 +476,16 @@ Retorne em JSON:
         return { telefone, horario, gmbLink };
       });
 
+      console.log(`        📞 Telefone GMB: ${dadosGMB.telefone || 'não encontrado'}`);
+      console.log(`        🕐 Horário: ${dadosGMB.horario || 'não encontrado'}`);
+      console.log(`        🔗 Link Maps: ${dadosGMB.gmbLink ? 'encontrado' : 'não encontrado'}`);
+
+      if (dadosGMB.telefone || dadosGMB.horario || dadosGMB.gmbLink) {
+        console.log(`     ✅ [GMB] Dados encontrados!`);
+      } else {
+        console.log(`     ❌ [GMB] Nenhum dado encontrado`);
+      }
+
       return {
         linkGMB: dadosGMB.gmbLink || undefined,
         telefoneGMB: dadosGMB.telefone || undefined,
@@ -417,19 +493,26 @@ Retorne em JSON:
       };
 
     } catch (error: any) {
-      console.error('     ⚠️  Erro ao buscar GMB:', error.message);
+      console.error(`     ⚠️  [GMB] ERRO: ${error.message}`);
       return {};
     }
   }
 
   // Verificar se número tem WhatsApp
   private async verificarWhatsApp(page: Page, numero: string): Promise<boolean | null> {
+    console.log(`     📲 [WHATSAPP] Verificando número: ${numero}`);
+
     const numeroFormatado = this.formatarNumeroWhatsApp(numero);
-    if (!numeroFormatado) return null;
+    if (!numeroFormatado) {
+      console.log(`        ❌ Número inválido, não foi possível formatar`);
+      return null;
+    }
 
     const waUrl = `https://wa.me/${numeroFormatado}`;
+    console.log(`        🔗 URL: ${waUrl}`);
 
     try {
+      console.log(`        ⏳ Verificando...`);
       await page.goto(waUrl, { waitUntil: 'networkidle2', timeout: 15000 });
       await page.waitForTimeout(2000);
 
@@ -442,9 +525,16 @@ Retorne em JSON:
                          conteudo.includes('Continuar para o chat') ||
                          conteudo.includes('Message');
 
+      if (temWhatsApp) {
+        console.log(`        ✅ Número TEM WhatsApp!`);
+      } else {
+        console.log(`        ❌ Número NÃO tem WhatsApp`);
+      }
+
       return temWhatsApp;
 
-    } catch (error) {
+    } catch (error: any) {
+      console.log(`        ⚠️  Erro ao verificar: ${error.message}`);
       return null;
     }
   }
@@ -468,58 +558,103 @@ Retorne em JSON:
 
   // Executar processamento
   async executar(empresas: EmpresaPlanilha[]): Promise<ResultadoEmpresa[]> {
-    console.log('');
-    console.log('🚀 Iniciando processamento de empresas...');
-    console.log(`📊 Total: ${empresas.length} empresas`);
-    console.log('====================================');
+    const inicioTotal = Date.now();
 
+    console.log('');
+    console.log('🚀 ========================================');
+    console.log('🚀 INICIANDO PROCESSAMENTO DE EMPRESAS');
+    console.log('🚀 ========================================');
+    console.log(`📊 Total de empresas: ${empresas.length}`);
+    console.log(`🤖 Modelo IA: ${this.config.geminiModel}`);
+    console.log(`⏰ Início: ${new Date().toLocaleString('pt-BR')}`);
+    console.log('');
+
+    console.log('🌐 Iniciando navegador Puppeteer...');
     this.browser = await puppeteer.launch({
       headless: false,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: null,
     });
+    console.log('✅ Navegador iniciado com sucesso!');
 
     const page = await this.browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    console.log('✅ Página principal criada');
+    console.log('');
 
     try {
       for (let i = 0; i < empresas.length; i++) {
+        const inicioEmpresa = Date.now();
         const empresa = empresas[i];
+
         console.log('');
-        console.log(`📌 [${i + 1}/${empresas.length}] Processando empresa...`);
-        console.log(`   Razão Social: ${empresa.razaoSocial}`);
-        console.log(`   Município: ${empresa.municipio || 'N/A'}`);
+        console.log('╔════════════════════════════════════════════════════════════════');
+        console.log(`║ 📌 EMPRESA ${i + 1} de ${empresas.length}`);
+        console.log('╠════════════════════════════════════════════════════════════════');
+        console.log(`║ 📋 Razão Social: ${empresa.razaoSocial}`);
+        console.log(`║ 🏷️  Nome Fantasia: ${empresa.nomeFantasia || '(não informado)'}`);
+        console.log(`║ 📍 Município/UF: ${empresa.municipio || 'N/A'}/${empresa.uf || 'N/A'}`);
+        console.log(`║ 📞 Telefone: ${empresa.telefone || '(não informado)'}`);
+        console.log(`║ 🏢 CNPJ: ${empresa.cnpj || 'N/A'}`);
+        console.log('╚════════════════════════════════════════════════════════════════');
+        console.log('');
 
         // 1. Identificar nome da empresa
+        console.log('   📝 ETAPA 1: Identificar nome comercial');
+        console.log('   ─────────────────────────────────────');
         const nomeIdentificado = await this.identificarNomeEmpresa(empresa);
+        console.log(`   ✅ Nome identificado: "${nomeIdentificado}"`);
+        console.log('');
 
         // 2. Buscar Instagram
+        console.log('   🔎 ETAPA 2: Buscar Instagram no Google');
+        console.log('   ─────────────────────────────────────');
         const instagramUrl = await this.buscarInstagramNoGoogle(page, nomeIdentificado, empresa.municipio);
+        console.log('');
 
+        // 3. Processar Instagram (se encontrado)
         let dadosInstagram: any = {};
         if (instagramUrl) {
+          console.log('   📱 ETAPA 3: Processar perfil do Instagram');
+          console.log('   ─────────────────────────────────────');
           const instaPage = await this.browser!.newPage();
           await instaPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
           dadosInstagram = await this.processarInstagram(instaPage, instagramUrl) || {};
           await instaPage.close();
+          console.log('');
+        } else {
+          console.log('   ⏭️  ETAPA 3: Pulando (Instagram não encontrado)');
+          console.log('');
         }
 
-        // 3. Buscar GMB
+        // 4. Buscar GMB
+        console.log('   📍 ETAPA 4: Buscar Google Meu Negócio');
+        console.log('   ─────────────────────────────────────');
         const dadosGMB = await this.buscarGMB(page, nomeIdentificado, empresa.municipio);
+        console.log('');
 
-        // 4. Verificar WhatsApp dos telefones
+        // 5. Verificar WhatsApp dos telefones
+        console.log('   📲 ETAPA 5: Verificar WhatsApp');
+        console.log('   ─────────────────────────────────────');
         let contatoBioTemWhatsApp: boolean | undefined;
         let telefoneGMBTemWhatsApp: boolean | undefined;
 
         if (dadosInstagram.contatoBio) {
+          console.log(`   Verificando telefone da bio: ${dadosInstagram.contatoBio}`);
           contatoBioTemWhatsApp = await this.verificarWhatsApp(page, dadosInstagram.contatoBio) || undefined;
+        } else {
+          console.log('   ⏭️  Pulando verificação (sem telefone na bio)');
         }
 
         if (dadosGMB.telefoneGMB) {
+          console.log(`   Verificando telefone GMB: ${dadosGMB.telefoneGMB}`);
           telefoneGMBTemWhatsApp = await this.verificarWhatsApp(page, dadosGMB.telefoneGMB) || undefined;
+        } else {
+          console.log('   ⏭️  Pulando verificação (sem telefone GMB)');
         }
+        console.log('');
 
-        // 5. Montar resultado
+        // 6. Montar resultado
         const resultado: ResultadoEmpresa = {
           ...empresa,
           nomeIdentificado,
@@ -542,16 +677,55 @@ Retorne em JSON:
           this.config.onProgresso(resultado, i + 1, empresas.length);
         }
 
-        console.log(`   ✅ Empresa processada!`);
+        const tempoEmpresa = ((Date.now() - inicioEmpresa) / 1000).toFixed(1);
+        console.log('   ════════════════════════════════════════');
+        console.log(`   ✅ EMPRESA ${i + 1} PROCESSADA em ${tempoEmpresa}s`);
+        console.log('   ════════════════════════════════════════');
+        console.log('   📊 RESUMO:');
+        console.log(`      - Nome: ${nomeIdentificado}`);
+        console.log(`      - Instagram: ${instagramUrl ? `@${dadosInstagram.username}` : '❌ não encontrado'}`);
+        console.log(`      - WhatsApp Bio: ${dadosInstagram.whatsappBio || '❌'}`);
+        console.log(`      - Telefone GMB: ${dadosGMB.telefoneGMB || '❌'}`);
+        console.log(`      - Site: ${dadosInstagram.siteProprioBio || '❌'}`);
+        console.log('');
       }
 
+    } catch (error: any) {
+      console.error('');
+      console.error('❌ ========================================');
+      console.error('❌ ERRO DURANTE O PROCESSAMENTO');
+      console.error('❌ ========================================');
+      console.error(`Mensagem: ${error.message}`);
+      console.error(`Stack: ${error.stack}`);
+      console.error('');
+      throw error;
+
     } finally {
+      console.log('🔄 Fechando navegador...');
       await this.browser.close();
+      console.log('✅ Navegador fechado');
     }
 
+    const tempoTotal = ((Date.now() - inicioTotal) / 1000 / 60).toFixed(1);
     console.log('');
-    console.log('====================================');
-    console.log(`✅ Processamento concluído! ${this.resultados.length} empresas processadas`);
+    console.log('🏁 ========================================');
+    console.log('🏁 PROCESSAMENTO CONCLUÍDO!');
+    console.log('🏁 ========================================');
+    console.log(`📊 Empresas processadas: ${this.resultados.length}`);
+    console.log(`⏱️  Tempo total: ${tempoTotal} minutos`);
+    console.log(`⏰ Fim: ${new Date().toLocaleString('pt-BR')}`);
+    console.log('');
+
+    // Resumo final
+    const comInstagram = this.resultados.filter(r => r.instagramUrl).length;
+    const comWhatsApp = this.resultados.filter(r => r.whatsappBio || r.contatoBioTemWhatsApp || r.telefoneGMBTemWhatsApp).length;
+    const comGMB = this.resultados.filter(r => r.linkGMB || r.telefoneGMB).length;
+
+    console.log('📈 ESTATÍSTICAS:');
+    console.log(`   - Com Instagram: ${comInstagram}/${this.resultados.length} (${((comInstagram/this.resultados.length)*100).toFixed(0)}%)`);
+    console.log(`   - Com WhatsApp: ${comWhatsApp}/${this.resultados.length} (${((comWhatsApp/this.resultados.length)*100).toFixed(0)}%)`);
+    console.log(`   - Com GMB: ${comGMB}/${this.resultados.length} (${((comGMB/this.resultados.length)*100).toFixed(0)}%)`);
+    console.log('');
 
     return this.resultados;
   }
