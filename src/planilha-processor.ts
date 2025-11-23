@@ -203,8 +203,10 @@ Retorne APENAS o nome, nada mais.`;
   }
 
   // Buscar Instagram da empresa no Google
-  private async buscarInstagramNoGoogle(page: Page, nomeEmpresa: string, cidade?: string): Promise<string | null> {
-    const query = `${nomeEmpresa} ${cidade || ''} instagram`.trim();
+  private async buscarInstagramNoGoogle(page: Page, nomeEmpresa: string, cidade?: string, uf?: string): Promise<string | null> {
+    // Sempre incluir cidade e UF na busca para melhorar precisão
+    const localizacao = [cidade, uf].filter(Boolean).join(' ');
+    const query = `"${nomeEmpresa}" ${localizacao} instagram`.trim();
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
     console.log(`     🔎 [GOOGLE] Buscando Instagram...`);
@@ -212,30 +214,41 @@ Retorne APENAS o nome, nada mais.`;
     console.log(`        URL: ${googleUrl}`);
 
     try {
-      console.log(`        ⏳ Navegando para Google...`);
-      await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-      console.log(`        ✅ Página carregada`);
-      await page.waitForTimeout(2000);
+      const buscar = async (): Promise<{ titulo: string; url: string }[]> => {
+        console.log(`        ⏳ Navegando para Google...`);
+        await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+        console.log(`        ✅ Página carregada`);
+        await page.waitForTimeout(2000);
 
-      // Verificar e resolver CAPTCHA se necessário
-      await this.verificarEResolverCaptcha(page);
+        // Verificar e resolver CAPTCHA se necessário
+        const teveCaptcha = await this.verificarEResolverCaptcha(page);
 
-      // Extrair resultados
-      console.log(`        🔍 Extraindo resultados da busca...`);
-      const resultados = await page.evaluate(() => {
-        const links: { titulo: string; url: string }[] = [];
-        const elementos = document.querySelectorAll('div.g a[href]');
+        // Se teve CAPTCHA, recarregar a página de busca
+        if (teveCaptcha) {
+          console.log(`        🔄 Recarregando busca após CAPTCHA...`);
+          await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+          await page.waitForTimeout(2000);
+        }
 
-        elementos.forEach(el => {
-          const href = (el as HTMLAnchorElement).href;
-          const titulo = el.closest('div.g')?.querySelector('h3')?.textContent || '';
-          if (href && !href.includes('google.com')) {
-            links.push({ titulo, url: href });
-          }
+        // Extrair resultados
+        console.log(`        🔍 Extraindo resultados da busca...`);
+        return await page.evaluate(() => {
+          const links: { titulo: string; url: string }[] = [];
+          const elementos = document.querySelectorAll('div.g a[href]');
+
+          elementos.forEach(el => {
+            const href = (el as HTMLAnchorElement).href;
+            const titulo = el.closest('div.g')?.querySelector('h3')?.textContent || '';
+            if (href && !href.includes('google.com')) {
+              links.push({ titulo, url: href });
+            }
+          });
+
+          return links.slice(0, 10);
         });
+      };
 
-        return links.slice(0, 10);
-      });
+      const resultados = await buscar();
 
       console.log(`        📋 ${resultados.length} resultados encontrados`);
 
@@ -447,44 +460,57 @@ Retorne em JSON:
   }
 
   // Buscar Google Meu Negócio
-  private async buscarGMB(page: Page, nomeEmpresa: string, cidade?: string): Promise<{
+  private async buscarGMB(page: Page, nomeEmpresa: string, cidade?: string, uf?: string): Promise<{
     linkGMB?: string;
     telefoneGMB?: string;
     horarioFuncionamento?: string;
   }> {
-    const query = `${nomeEmpresa} ${cidade || ''}`.trim();
+    // Sempre incluir cidade e UF na busca
+    const localizacao = [cidade, uf].filter(Boolean).join(' ');
+    const query = `"${nomeEmpresa}" ${localizacao}`.trim();
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
     console.log(`     📍 [GMB] Buscando Google Meu Negócio...`);
     console.log(`        Query: "${query}"`);
 
     try {
-      console.log(`        ⏳ Navegando para Google...`);
-      await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-      console.log(`        ✅ Página carregada`);
-      await page.waitForTimeout(2000);
+      const buscar = async () => {
+        console.log(`        ⏳ Navegando para Google...`);
+        await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+        console.log(`        ✅ Página carregada`);
+        await page.waitForTimeout(2000);
 
-      // Verificar e resolver CAPTCHA se necessário
-      await this.verificarEResolverCaptcha(page);
+        // Verificar e resolver CAPTCHA se necessário
+        const teveCaptcha = await this.verificarEResolverCaptcha(page);
 
-      // Extrair dados do painel de conhecimento (GMB)
-      console.log(`        🔍 Procurando painel de conhecimento (GMB)...`);
-      const dadosGMB = await page.evaluate(() => {
-        // Procurar telefone
-        const telefoneEl = document.querySelector('[data-dtype="d3ph"] span') ||
-                          document.querySelector('span[aria-label*="telefone"]');
-        const telefone = telefoneEl?.textContent || null;
+        // Se teve CAPTCHA, recarregar a página de busca
+        if (teveCaptcha) {
+          console.log(`        🔄 Recarregando busca após CAPTCHA...`);
+          await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+          await page.waitForTimeout(2000);
+        }
 
-        // Procurar horário
-        const horarioEl = document.querySelector('[data-dtype="d3oh"]');
-        const horario = horarioEl?.textContent || null;
+        // Extrair dados do painel de conhecimento (GMB)
+        console.log(`        🔍 Procurando painel de conhecimento (GMB)...`);
+        return await page.evaluate(() => {
+          // Procurar telefone
+          const telefoneEl = document.querySelector('[data-dtype="d3ph"] span') ||
+                            document.querySelector('span[aria-label*="telefone"]');
+          const telefone = telefoneEl?.textContent || null;
 
-        // Procurar link do GMB
-        const gmbLink = document.querySelector('a[href*="maps.google.com"]')?.getAttribute('href') ||
-                       document.querySelector('a[data-url*="maps"]')?.getAttribute('href');
+          // Procurar horário
+          const horarioEl = document.querySelector('[data-dtype="d3oh"]');
+          const horario = horarioEl?.textContent || null;
 
-        return { telefone, horario, gmbLink };
-      });
+          // Procurar link do GMB
+          const gmbLink = document.querySelector('a[href*="maps.google.com"]')?.getAttribute('href') ||
+                         document.querySelector('a[data-url*="maps"]')?.getAttribute('href');
+
+          return { telefone, horario, gmbLink };
+        });
+      };
+
+      const dadosGMB = await buscar();
 
       console.log(`        📞 Telefone GMB: ${dadosGMB.telefone || 'não encontrado'}`);
       console.log(`        🕐 Horário: ${dadosGMB.horario || 'não encontrado'}`);
@@ -567,7 +593,7 @@ Retorne em JSON:
   }
 
   // Verificar e resolver CAPTCHA
-  private async verificarEResolverCaptcha(page: Page): Promise<void> {
+  private async verificarEResolverCaptcha(page: Page): Promise<boolean> {
     console.log('     🔐 Verificando presença de CAPTCHA...');
 
     const temCaptcha = await page.evaluate(() => {
@@ -576,7 +602,8 @@ Retorne em JSON:
              document.querySelector('iframe[src*="recaptcha"]') !== null ||
              document.body.innerText.toLowerCase().includes('unusual traffic') ||
              document.body.innerText.toLowerCase().includes('não é um robô') ||
-             document.body.innerText.includes('captcha');
+             document.body.innerText.toLowerCase().includes('systems have detected') ||
+             document.title.toLowerCase().includes('sorry');
     });
 
     if (temCaptcha) {
@@ -601,50 +628,96 @@ Retorne em JSON:
 
         if (siteKey) {
           console.log('     🔑 Site Key encontrada:', siteKey);
-          console.log('     ⏳ Enviando para 2Captcha resolver...');
+          console.log('     ⏳ Enviando para 2Captcha resolver (pode levar 30-60s)...');
 
           const result = await this.solver.recaptcha({
             googlekey: siteKey,
             pageurl: page.url()
           });
-          console.log('     ✅ CAPTCHA resolvido com sucesso!');
+          console.log('     ✅ Token recebido do 2Captcha!');
 
           // Injetar resposta do CAPTCHA
           await page.evaluate((token: string) => {
-            const responseElement = document.getElementById('g-recaptcha-response') as HTMLTextAreaElement;
-            if (responseElement) {
-              responseElement.value = token;
-              responseElement.style.display = 'block';
-            }
+            // Preencher todos os campos de resposta possíveis
+            const responseElements = document.querySelectorAll('[name="g-recaptcha-response"], #g-recaptcha-response');
+            responseElements.forEach((el: any) => {
+              el.value = token;
+              el.style.display = 'block';
+            });
 
-            // Tentar também via callback
-            const callback = (window as any).___grecaptcha_cfg?.clients?.[0]?.W?.W?.callback;
-            if (callback) callback(token);
+            // Tentar chamar callback do reCAPTCHA
+            try {
+              const recaptchaCallback = (window as any).___grecaptcha_cfg?.clients?.[0]?.W?.W?.callback ||
+                                       (window as any).___grecaptcha_cfg?.clients?.[0]?.o?.o?.callback ||
+                                       (window as any).onCaptchaSuccess;
+              if (recaptchaCallback) {
+                recaptchaCallback(token);
+              }
+            } catch (e) {}
           }, result.data);
 
-          // Tentar submeter o formulário
-          const submitButton = await page.$('button[type="submit"], input[type="submit"]');
-          if (submitButton) {
-            await submitButton.click();
-            await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
+          await page.waitForTimeout(1000);
+
+          // Tentar submeter o formulário do CAPTCHA do Google
+          const formSubmitted = await page.evaluate(() => {
+            // Procurar o formulário que contém o CAPTCHA
+            const form = document.querySelector('form[action*="sorry"]') ||
+                        document.querySelector('form') ||
+                        document.querySelector('#captcha-form');
+            if (form) {
+              (form as HTMLFormElement).submit();
+              return true;
+            }
+
+            // Tentar clicar no botão de submit
+            const submitBtn = document.querySelector('input[type="submit"]') ||
+                             document.querySelector('button[type="submit"]') ||
+                             document.querySelector('#submit') ||
+                             document.querySelector('.rc-button-default');
+            if (submitBtn) {
+              (submitBtn as HTMLElement).click();
+              return true;
+            }
+
+            return false;
+          });
+
+          if (formSubmitted) {
+            console.log('     📤 Formulário submetido, aguardando navegação...');
+            await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
           }
 
-          console.log('     ✅ CAPTCHA submetido com sucesso');
           await page.waitForTimeout(2000);
-        } else {
-          console.log('     ⚠️  Site Key não encontrada, tentando resolver manualmente...');
 
-          // Esperar um pouco para o usuário resolver se necessário
-          console.log('     ⏳ Aguardando 30 segundos para resolução manual...');
-          await page.waitForTimeout(30000);
+          // Verificar se ainda tem CAPTCHA
+          const aindaTemCaptcha = await page.evaluate(() => {
+            return document.body.innerText.toLowerCase().includes('unusual traffic') ||
+                   document.body.innerText.toLowerCase().includes('não é um robô') ||
+                   document.title.toLowerCase().includes('sorry');
+          });
+
+          if (aindaTemCaptcha) {
+            console.log('     ⚠️  CAPTCHA ainda presente. Aguardando resolução manual (60s)...');
+            await page.waitForTimeout(60000);
+          } else {
+            console.log('     ✅ CAPTCHA resolvido com sucesso!');
+          }
+
+          return true;
+        } else {
+          console.log('     ⚠️  Site Key não encontrada. Aguardando resolução manual (60s)...');
+          await page.waitForTimeout(60000);
+          return true;
         }
       } catch (error: any) {
         console.error('     ❌ Erro ao resolver CAPTCHA:', error.message);
-        console.log('     ⚠️  Aguardando 30 segundos para resolução manual...');
-        await page.waitForTimeout(30000);
+        console.log('     ⚠️  Aguardando resolução manual (60s)...');
+        await page.waitForTimeout(60000);
+        return true;
       }
     } else {
       console.log('     ✅ Nenhum CAPTCHA detectado');
+      return false;
     }
   }
 
@@ -701,7 +774,7 @@ Retorne em JSON:
         // 2. Buscar Instagram
         console.log('   🔎 ETAPA 2: Buscar Instagram no Google');
         console.log('   ─────────────────────────────────────');
-        const instagramUrl = await this.buscarInstagramNoGoogle(page, nomeIdentificado, empresa.municipio);
+        const instagramUrl = await this.buscarInstagramNoGoogle(page, nomeIdentificado, empresa.municipio, empresa.uf);
         console.log('');
 
         // 3. Processar Instagram (se encontrado)
@@ -722,7 +795,7 @@ Retorne em JSON:
         // 4. Buscar GMB
         console.log('   📍 ETAPA 4: Buscar Google Meu Negócio');
         console.log('   ─────────────────────────────────────');
-        const dadosGMB = await this.buscarGMB(page, nomeIdentificado, empresa.municipio);
+        const dadosGMB = await this.buscarGMB(page, nomeIdentificado, empresa.municipio, empresa.uf);
         console.log('');
 
         // 5. Verificar WhatsApp dos telefones
