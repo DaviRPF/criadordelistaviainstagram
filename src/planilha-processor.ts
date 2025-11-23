@@ -1,5 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Solver } from '@2captcha/captcha-solver';
 import * as XLSX from 'xlsx';
 import { InstagramAuth } from './instagram-auth';
 
@@ -44,6 +45,7 @@ interface ResultadoEmpresa extends EmpresaPlanilha {
 interface ProcessorConfig {
   geminiApiKey: string;
   geminiModel: string;
+  twoCaptchaApiKey: string;
   instagramAuth: InstagramAuth;
   onProgresso?: (resultado: ResultadoEmpresa, atual: number, total: number) => void;
 }
@@ -52,11 +54,13 @@ export class PlanilhaProcessor {
   private config: ProcessorConfig;
   private browser: Browser | null = null;
   private gemini: GoogleGenerativeAI;
+  private solver: Solver;
   private resultados: ResultadoEmpresa[] = [];
 
   constructor(config: ProcessorConfig) {
     this.config = config;
     this.gemini = new GoogleGenerativeAI(config.geminiApiKey);
+    this.solver = new Solver(config.twoCaptchaApiKey);
   }
 
   // Ler planilha xlsx/xls
@@ -212,6 +216,9 @@ Retorne APENAS o nome, nada mais.`;
       await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
       console.log(`        ✅ Página carregada`);
       await page.waitForTimeout(2000);
+
+      // Verificar e resolver CAPTCHA se necessário
+      await this.verificarEResolverCaptcha(page);
 
       // Extrair resultados
       console.log(`        🔍 Extraindo resultados da busca...`);
@@ -457,6 +464,9 @@ Retorne em JSON:
       console.log(`        ✅ Página carregada`);
       await page.waitForTimeout(2000);
 
+      // Verificar e resolver CAPTCHA se necessário
+      await this.verificarEResolverCaptcha(page);
+
       // Extrair dados do painel de conhecimento (GMB)
       console.log(`        🔍 Procurando painel de conhecimento (GMB)...`);
       const dadosGMB = await page.evaluate(() => {
@@ -554,6 +564,88 @@ Retorne em JSON:
     }
 
     throw new Error('Falha ao chamar IA');
+  }
+
+  // Verificar e resolver CAPTCHA
+  private async verificarEResolverCaptcha(page: Page): Promise<void> {
+    console.log('     🔐 Verificando presença de CAPTCHA...');
+
+    const temCaptcha = await page.evaluate(() => {
+      return document.querySelector('.g-recaptcha') !== null ||
+             document.querySelector('#recaptcha') !== null ||
+             document.querySelector('iframe[src*="recaptcha"]') !== null ||
+             document.body.innerText.toLowerCase().includes('unusual traffic') ||
+             document.body.innerText.toLowerCase().includes('não é um robô') ||
+             document.body.innerText.includes('captcha');
+    });
+
+    if (temCaptcha) {
+      console.log('     ⚠️  CAPTCHA detectado! Resolvendo com 2Captcha...');
+
+      try {
+        // Tentar encontrar o siteKey do reCAPTCHA
+        const siteKey = await page.evaluate(() => {
+          const element = document.querySelector('.g-recaptcha');
+          if (element) return element.getAttribute('data-sitekey');
+
+          // Tentar encontrar em iframes
+          const iframe = document.querySelector('iframe[src*="recaptcha"]');
+          if (iframe) {
+            const src = iframe.getAttribute('src') || '';
+            const match = src.match(/k=([^&]+)/);
+            return match ? match[1] : null;
+          }
+
+          return null;
+        });
+
+        if (siteKey) {
+          console.log('     🔑 Site Key encontrada:', siteKey);
+          console.log('     ⏳ Enviando para 2Captcha resolver...');
+
+          const result = await this.solver.recaptcha({
+            googlekey: siteKey,
+            pageurl: page.url()
+          });
+          console.log('     ✅ CAPTCHA resolvido com sucesso!');
+
+          // Injetar resposta do CAPTCHA
+          await page.evaluate((token: string) => {
+            const responseElement = document.getElementById('g-recaptcha-response') as HTMLTextAreaElement;
+            if (responseElement) {
+              responseElement.value = token;
+              responseElement.style.display = 'block';
+            }
+
+            // Tentar também via callback
+            const callback = (window as any).___grecaptcha_cfg?.clients?.[0]?.W?.W?.callback;
+            if (callback) callback(token);
+          }, result.data);
+
+          // Tentar submeter o formulário
+          const submitButton = await page.$('button[type="submit"], input[type="submit"]');
+          if (submitButton) {
+            await submitButton.click();
+            await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
+          }
+
+          console.log('     ✅ CAPTCHA submetido com sucesso');
+          await page.waitForTimeout(2000);
+        } else {
+          console.log('     ⚠️  Site Key não encontrada, tentando resolver manualmente...');
+
+          // Esperar um pouco para o usuário resolver se necessário
+          console.log('     ⏳ Aguardando 30 segundos para resolução manual...');
+          await page.waitForTimeout(30000);
+        }
+      } catch (error: any) {
+        console.error('     ❌ Erro ao resolver CAPTCHA:', error.message);
+        console.log('     ⚠️  Aguardando 30 segundos para resolução manual...');
+        await page.waitForTimeout(30000);
+      }
+    } else {
+      console.log('     ✅ Nenhum CAPTCHA detectado');
+    }
   }
 
   // Executar processamento

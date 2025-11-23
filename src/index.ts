@@ -251,6 +251,7 @@ app.post('/api/processar-planilha', upload.single('planilha'), async (req, res) 
     const processor = new PlanilhaProcessor({
       geminiApiKey: process.env.GEMINI_API_KEY!,
       geminiModel: modeloIA,
+      twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
       instagramAuth,
       onProgresso: (resultado, atual, total) => {
         enviarEvento('progresso', { resultado, atual, total });
@@ -287,6 +288,7 @@ app.post('/api/preview-planilha', upload.single('planilha'), async (req, res) =>
     const processor = new PlanilhaProcessor({
       geminiApiKey: process.env.GEMINI_API_KEY!,
       geminiModel: 'gemini-2.5-flash',
+      twoCaptchaApiKey: process.env.TWOCAPTCHA_API_KEY!,
       instagramAuth
     });
 
