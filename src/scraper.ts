@@ -523,48 +523,13 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
           )?.textContent ||
           '';
 
-        // Extrair o link clicável real do perfil (não o texto da bio)
-        // O Instagram coloca o link em um elemento <a> específico no header
-        let linkBio = '';
-
-        // Tentar múltiplos seletores para o link clicável
-        const linkElement =
-          document.querySelector('header a[href*="l.instagram.com"]') ||
-          document.querySelector('header a[rel="me nofollow noopener noreferrer"]') ||
-          document.querySelector('a[href*="linktr.ee"]') ||
-          document.querySelector('a[href*="beacons.ai"]') ||
-          document.querySelector('a[href*="bio.link"]') ||
-          document.querySelector('a[href*="linkin.bio"]') ||
-          document.querySelector('a[href*="linkr.bio"]') ||
-          document.querySelector('a[href*="tap.bio"]') ||
-          document.querySelector('a[href*="campsite.bio"]') ||
-          document.querySelector('a[href*="hoo.be"]') ||
-          document.querySelector('a[href*="solo.to"]') ||
-          document.querySelector('a[href*="carrd.co"]') ||
-          document.querySelector('header section a[target="_blank"]') ||
-          Array.from(document.querySelectorAll('header a')).find(a => {
-            const href = (a as HTMLAnchorElement).href;
-            return href &&
-                   !href.includes('instagram.com') &&
-                   !href.includes('/explore') &&
-                   !href.includes('/accounts') &&
-                   href.startsWith('http');
-          });
-
-        if (linkElement) {
-          linkBio = (linkElement as HTMLAnchorElement).href;
-        }
-
-        return { nome, username, bio, linkBio };
+        return { nome, username, bio };
       });
 
       console.log('  📋 Dados extraídos:');
       console.log('     Nome:', dadosPerfil.nome);
       console.log('     Username:', dadosPerfil.username);
       console.log('     Bio:', dadosPerfil.bio.substring(0, 100) + '...');
-      if (dadosPerfil.linkBio) {
-        console.log('     🔗 Link clicável da bio:', dadosPerfil.linkBio);
-      }
 
       // Se não conseguiu pegar o username, pular
       if (!dadosPerfil.username || dadosPerfil.username === 'accountslogin') {
@@ -579,29 +544,8 @@ Este resultado é de um perfil do Instagram? Responda apenas "SIM" ou "NÃO".`;
         console.log('     📞 Contato encontrado:', contato);
       }
 
-      // Primeiro tentar usar o link clicável real extraído da página
-      let linkTree: string | null = null;
-      let siteProprio: string | null = null;
-
-      if (dadosPerfil.linkBio) {
-        // Classificar o link real extraído
-        const linkReal = dadosPerfil.linkBio;
-        const servicosLinktree = ['linktr.ee', 'beacons.ai', 'bio.link', 'linkin.bio', 'linkr.bio', 'tap.bio', 'campsite.bio', 'hoo.be', 'solo.to', 'carrd.co', 'lnk.bio', 'linklist.bio'];
-
-        if (servicosLinktree.some(servico => linkReal.includes(servico))) {
-          linkTree = linkReal;
-        } else if (!linkReal.includes('instagram.com') && !linkReal.includes('facebook.com') && !linkReal.includes('twitter.com') && !linkReal.includes('tiktok.com') && !linkReal.includes('youtube.com')) {
-          // Se não é rede social, é site próprio
-          siteProprio = linkReal;
-        }
-      }
-
-      // Se não encontrou link clicável, tentar extrair do texto da bio usando IA
-      if (!linkTree && !siteProprio && dadosPerfil.bio) {
-        const linksExtraidos = await this.extrairLinksDaBio(dadosPerfil.bio);
-        linkTree = linksExtraidos.linkTree;
-        siteProprio = linksExtraidos.siteProprio;
-      }
+      // Extrair links (Linktree/Site próprio) da bio usando IA
+      const { linkTree, siteProprio } = await this.extrairLinksDaBio(dadosPerfil.bio);
 
       let whatsappLinkTree: string | undefined = undefined;
       let numeroWhatsappLinkTree: string | undefined = undefined;
@@ -701,19 +645,23 @@ Se encontrar algum contato, retorne APENAS o número ou link. Se não encontrar,
     console.log('     🔗 Usando IA para extrair links da bio...');
 
     try {
-      const prompt = `Analise a seguinte bio do Instagram e identifique se há:
-1. Link do Linktree (linktr.ee ou beacons.ai ou outros serviços similares de link in bio)
-2. Site próprio (qualquer outro link que seja um site próprio da empresa)
+      const prompt = `Analise a seguinte bio do Instagram e identifique se há links/URLs mencionados.
 
 Bio: "${bio}"
 
+INSTRUÇÕES:
+1. Procure por URLs ou domínios mencionados na bio (podem estar sem http/https)
+2. Serviços de "link in bio" incluem: linktr.ee, beacons.ai, bio.link, linkin.bio, linkr.bio, tap.bio, campsite.bio, hoo.be, solo.to, carrd.co, lnk.bio, linklist.bio, allmylinks.com, contactinbio.com
+3. Sites próprios são domínios que NÃO são redes sociais nem serviços de link in bio (ex: minhaempresa.com.br, lojax.com)
+4. Se o link estiver incompleto (ex: "linktr.ee/usuario"), complete com https://
+
 Responda EXATAMENTE neste formato JSON:
 {
-  "linktree": "URL_DO_LINKTREE ou null",
-  "site": "URL_DO_SITE_PROPRIO ou null"
+  "linktree": "URL_COMPLETA ou null",
+  "site": "URL_COMPLETA ou null"
 }
 
-Se não encontrar algum dos links, use null.`;
+IMPORTANTE: Se encontrar um link, retorne a URL completa com https://. Se não encontrar, use null.`;
 
       const resposta = await this.chamarIAComRetry(prompt);
 
