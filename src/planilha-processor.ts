@@ -204,17 +204,16 @@ Retorne APENAS o nome, nada mais.`;
 
   // Buscar Instagram da empresa no Google
   private async buscarInstagramNoGoogle(page: Page, nomeEmpresa: string, cidade?: string, uf?: string): Promise<string | null> {
-    // Sempre incluir cidade e UF na busca para melhorar precisão
+    // Montar query SEM aspas (mais flexível)
     const localizacao = [cidade, uf].filter(Boolean).join(' ');
-    const query = `"${nomeEmpresa}" ${localizacao} instagram`.trim();
-    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    const queryCompleta = `${nomeEmpresa} ${localizacao} instagram site:instagram.com`.trim();
 
     console.log(`     🔎 [GOOGLE] Buscando Instagram...`);
-    console.log(`        Query: "${query}"`);
-    console.log(`        URL: ${googleUrl}`);
+    console.log(`        Query: "${queryCompleta}"`);
 
     try {
-      const buscar = async (): Promise<{ titulo: string; url: string }[]> => {
+      const buscar = async (query: string): Promise<{ titulo: string; url: string }[]> => {
+        const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=20`;
         console.log(`        ⏳ Navegando para Google...`);
         await page.goto(googleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
         console.log(`        ✅ Página carregada`);
@@ -230,39 +229,63 @@ Retorne APENAS o nome, nada mais.`;
           await page.waitForTimeout(2000);
         }
 
-        // Extrair resultados
+        // Extrair resultados - múltiplos seletores para compatibilidade
         console.log(`        🔍 Extraindo resultados da busca...`);
         return await page.evaluate(() => {
           const links: { titulo: string; url: string }[] = [];
-          const elementos = document.querySelectorAll('div.g a[href]');
 
-          elementos.forEach(el => {
-            const href = (el as HTMLAnchorElement).href;
-            const titulo = el.closest('div.g')?.querySelector('h3')?.textContent || '';
-            if (href && !href.includes('google.com')) {
-              links.push({ titulo, url: href });
-            }
-          });
+          // Tentar múltiplos seletores (Google muda frequentemente)
+          const seletores = [
+            'div.g a[href]',
+            'div[data-hveid] a[href]',
+            '#search a[href]',
+            '.yuRUbf a[href]',
+            'a[jsname="UWckNb"]'
+          ];
 
-          return links.slice(0, 10);
+          for (const seletor of seletores) {
+            const elementos = document.querySelectorAll(seletor);
+            elementos.forEach(el => {
+              const href = (el as HTMLAnchorElement).href;
+              const titulo = el.textContent || el.closest('div')?.querySelector('h3')?.textContent || '';
+              if (href &&
+                  !href.includes('google.com') &&
+                  !href.includes('webcache') &&
+                  !links.some(l => l.url === href)) {
+                links.push({ titulo: titulo.substring(0, 100), url: href });
+              }
+            });
+          }
+
+          return links.slice(0, 20);
         });
       };
 
-      const resultados = await buscar();
-
+      // Primeira tentativa com localização
+      let resultados = await buscar(queryCompleta);
       console.log(`        📋 ${resultados.length} resultados encontrados`);
+
+      // Se não encontrou nada, tentar sem localização
+      if (resultados.length === 0 && localizacao) {
+        console.log(`        🔄 Tentando busca sem localização...`);
+        const querySemLocal = `${nomeEmpresa} instagram site:instagram.com`;
+        resultados = await buscar(querySemLocal);
+        console.log(`        📋 ${resultados.length} resultados na segunda tentativa`);
+      }
 
       // Listar resultados para debug
       resultados.forEach((r, idx) => {
         const isInsta = r.url.includes('instagram.com') ? '📱' : '  ';
-        console.log(`        ${isInsta} [${idx + 1}] ${r.titulo.substring(0, 40)}... -> ${r.url.substring(0, 60)}...`);
+        console.log(`        ${isInsta} [${idx + 1}] ${r.url.substring(0, 70)}...`);
       });
 
       // Procurar resultado do Instagram
       for (const resultado of resultados) {
         if (resultado.url.includes('instagram.com') &&
             !resultado.url.includes('/explore') &&
-            !resultado.url.includes('/accounts')) {
+            !resultado.url.includes('/accounts') &&
+            !resultado.url.includes('/p/') &&
+            !resultado.url.includes('/reel/')) {
           console.log(`     ✅ [GOOGLE] Instagram encontrado: ${resultado.url}`);
           return resultado.url;
         }
@@ -465,9 +488,9 @@ Retorne em JSON:
     telefoneGMB?: string;
     horarioFuncionamento?: string;
   }> {
-    // Sempre incluir cidade e UF na busca
+    // Montar query SEM aspas
     const localizacao = [cidade, uf].filter(Boolean).join(' ');
-    const query = `"${nomeEmpresa}" ${localizacao}`.trim();
+    const query = `${nomeEmpresa} ${localizacao}`.trim();
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
     console.log(`     📍 [GMB] Buscando Google Meu Negócio...`);
