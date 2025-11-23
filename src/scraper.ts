@@ -83,24 +83,96 @@ export class ProspectorScraper {
     return 'https://' + urlTrimmed;
   }
 
+  // Formatar número de telefone para WhatsApp (Brasil)
+  // Aceita diversos formatos: (11) 99999-9999, 11999999999, +55 11 99999-9999, etc.
+  private formatarNumeroWhatsApp(numero: string): string | null {
+    if (!numero) return null;
+
+    // Remover tudo que não é número
+    let apenasNumeros = numero.replace(/\D/g, '');
+
+    // Se começar com 0, remover (ex: 011 para SP)
+    if (apenasNumeros.startsWith('0')) {
+      apenasNumeros = apenasNumeros.substring(1);
+    }
+
+    // Tamanhos esperados:
+    // 8 dígitos = telefone fixo sem DDD (não funciona no WhatsApp)
+    // 9 dígitos = celular sem DDD (não temos como saber o DDD)
+    // 10 dígitos = DDD + fixo (8) ou DDD + celular antigo sem 9
+    // 11 dígitos = DDD + celular com 9
+    // 12 dígitos = 55 + DDD + fixo (8) ou 55 + DDD + celular sem 9
+    // 13 dígitos = 55 + DDD + celular com 9
+
+    const len = apenasNumeros.length;
+
+    // Muito curto - inválido
+    if (len < 10) {
+      console.log(`     ⚠️  Número muito curto (${len} dígitos): ${apenasNumeros}`);
+      return null;
+    }
+
+    // Já tem código do país (55)
+    if (apenasNumeros.startsWith('55')) {
+      // 55 + DDD (2) + número (8 ou 9) = 12 ou 13 dígitos
+      if (len === 12) {
+        // 55 + DDD + 8 dígitos (pode ser fixo ou celular sem 9)
+        // Tentar adicionar 9 se o terceiro dígito do número for >= 6 (indica celular)
+        const ddd = apenasNumeros.substring(2, 4);
+        const telefone = apenasNumeros.substring(4);
+        const primeiroDigito = telefone.charAt(0);
+
+        // Se primeiro dígito >= 6, provavelmente é celular sem o 9
+        if (parseInt(primeiroDigito) >= 6) {
+          apenasNumeros = '55' + ddd + '9' + telefone;
+          console.log(`     🔧 Adicionado 9: ${apenasNumeros}`);
+        }
+      }
+      // Se já tem 13 dígitos, está correto
+      return apenasNumeros;
+    }
+
+    // Não tem código do país
+    if (len === 10) {
+      // DDD + 8 dígitos (pode ser fixo ou celular sem 9)
+      const ddd = apenasNumeros.substring(0, 2);
+      const telefone = apenasNumeros.substring(2);
+      const primeiroDigito = telefone.charAt(0);
+
+      // Se primeiro dígito >= 6, provavelmente é celular sem o 9
+      if (parseInt(primeiroDigito) >= 6) {
+        apenasNumeros = '55' + ddd + '9' + telefone;
+        console.log(`     🔧 Adicionado 55 e 9: ${apenasNumeros}`);
+      } else {
+        // Fixo - adiciona só o 55
+        apenasNumeros = '55' + apenasNumeros;
+        console.log(`     🔧 Adicionado 55: ${apenasNumeros}`);
+      }
+    } else if (len === 11) {
+      // DDD + 9 + 8 dígitos (celular completo)
+      apenasNumeros = '55' + apenasNumeros;
+      console.log(`     🔧 Adicionado 55: ${apenasNumeros}`);
+    } else {
+      // Formato desconhecido, tenta adicionar 55
+      apenasNumeros = '55' + apenasNumeros;
+      console.log(`     🔧 Formato incomum, adicionado 55: ${apenasNumeros}`);
+    }
+
+    return apenasNumeros;
+  }
+
   // Verificar se um número de telefone tem WhatsApp
   private async verificarWhatsApp(numero: string): Promise<boolean | null> {
     if (!this.browser || !numero) return null;
 
     console.log(`     📱 Verificando se ${numero} tem WhatsApp...`);
 
-    // Extrair apenas números
-    const apenasNumeros = numero.replace(/\D/g, '');
+    // Formatar número para WhatsApp
+    const numeroFormatado = this.formatarNumeroWhatsApp(numero);
 
-    if (apenasNumeros.length < 10) {
-      console.log('     ⚠️  Número muito curto para verificar');
+    if (!numeroFormatado) {
+      console.log('     ⚠️  Número inválido para verificar WhatsApp');
       return null;
-    }
-
-    // Adicionar código do Brasil se não tiver
-    let numeroFormatado = apenasNumeros;
-    if (!numeroFormatado.startsWith('55') && numeroFormatado.length <= 11) {
-      numeroFormatado = '55' + numeroFormatado;
     }
 
     const waUrl = `https://wa.me/${numeroFormatado}`;
