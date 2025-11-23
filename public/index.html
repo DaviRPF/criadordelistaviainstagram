@@ -389,41 +389,31 @@
             </div>
         </div>
 
-        <!-- Card de Prospecção -->
-        <div class="card" id="prospectorCard" style="opacity: 0.5; pointer-events: none;">
-            <h1>🔍 Prospector Instagram</h1>
-            <p class="subtitle">Sistema de prospecção automatizada de empresas</p>
+        <!-- Card de Upload de Planilha -->
+        <div class="card" id="planilhaCard" style="opacity: 0.5; pointer-events: none;">
+            <h1>📊 Processador de Planilha</h1>
+            <p class="subtitle">Envie uma planilha com dados de empresas da Receita Federal</p>
 
-            <form id="prospectorForm">
+            <form id="planilhaForm">
                 <div class="form-group">
-                    <label for="tipoEstabelecimento">Tipo de Estabelecimento</label>
+                    <label for="planilhaUpload">📁 Selecionar Planilha (Excel)</label>
                     <input
-                        type="text"
-                        id="tipoEstabelecimento"
-                        placeholder="Ex: Pizzaria, Academia, Clínica Odontológica..."
+                        type="file"
+                        id="planilhaUpload"
+                        accept=".xlsx,.xls"
                         required
+                        style="padding: 12px; background: #f8f9fa; border: 2px dashed #667eea; border-radius: 10px; cursor: pointer;"
                     >
+                    <p class="small-text">Formatos aceitos: .xlsx, .xls (máx. 10MB)</p>
                 </div>
 
-                <div class="form-group">
-                    <label for="cidade">Cidade</label>
-                    <input
-                        type="text"
-                        id="cidade"
-                        placeholder="Ex: São Paulo, Rio de Janeiro..."
-                        required
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="limite">Limite de Contas (opcional)</label>
-                    <input
-                        type="number"
-                        id="limite"
-                        placeholder="Deixe vazio para buscar todas"
-                        min="1"
-                    >
-                    <p class="small-text">Se deixar vazio, buscará todas as contas disponíveis</p>
+                <div id="previewSection" style="display: none; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px;">📋 Preview da Planilha</h3>
+                    <div id="previewInfo" style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <p id="previewTotal" style="font-weight: 600;"></p>
+                        <p id="previewColunas" style="font-size: 12px; color: #666;"></p>
+                    </div>
+                    <div id="previewTable" style="overflow-x: auto; max-height: 200px; overflow-y: auto;"></div>
                 </div>
 
                 <div class="form-group">
@@ -441,47 +431,13 @@
                     <p class="small-text">Escolha o modelo de IA que será usado para análise de dados</p>
                 </div>
 
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="pularProcessadas" checked>
-                        ⚡ Pular empresas já processadas
-                    </label>
-                    <p class="small-text">Economiza tempo pulando perfis que já foram exportados anteriormente</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="cacheUpload">📥 Importar exports antigos (CSV/JSON)</label>
-                    <input
-                        type="file"
-                        id="cacheUpload"
-                        accept=".csv,.json"
-                        multiple
-                        style="padding: 8px;"
-                    >
-                    <p class="small-text" id="cacheStatus">Nenhum arquivo importado</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="cachePaste">✂️ Ou cole os dados aqui (CSV/JSON)</label>
-                    <textarea
-                        id="cachePaste"
-                        placeholder="Cole os dados de exports antigos aqui (CSV ou JSON)..."
-                        rows="5"
-                        style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; font-family: monospace; font-size: 13px;"
-                    ></textarea>
-                    <button type="button" id="btnProcessarPaste" style="width: auto; padding: 10px 20px; margin-top: 10px;">
-                        📋 Processar Dados Colados
-                    </button>
-                    <p class="small-text" id="pasteStatus"></p>
-                </div>
-
-                <button type="submit" id="btnIniciar">🚀 Iniciar Prospecção</button>
+                <button type="submit" id="btnProcessar" disabled>🚀 Processar Empresas</button>
             </form>
 
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p><strong>Processando...</strong></p>
-                <p class="small-text">Aguarde enquanto coletamos os dados</p>
+                <p class="small-text">Aguarde enquanto processamos as empresas</p>
             </div>
         </div>
 
@@ -510,8 +466,8 @@
             document.getElementById('loginStatus').innerHTML = '<span>✅ Logado com sucesso!</span>';
             document.getElementById('loginStatus').classList.add('logado');
             document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('prospectorCard').style.opacity = '1';
-            document.getElementById('prospectorCard').style.pointerEvents = 'auto';
+            document.getElementById('planilhaCard').style.opacity = '1';
+            document.getElementById('planilhaCard').style.pointerEvents = 'auto';
         }
 
         // Login no Instagram
@@ -607,169 +563,100 @@
         verificarLoginEconodata();
 
         let resultadosAtuais = [];
-        let estatisticas = { puladas: 0, novas: 0 };
+        let arquivoPlanilha = null;
 
-        // Função auxiliar para extrair usernames de texto (CSV ou JSON)
-        function extrairUsernamesDeTexto(text, formato) {
-            let usernames = [];
+        // Upload de planilha - fazer preview
+        document.getElementById('planilhaUpload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-            try {
-                if (formato === 'csv') {
-                    const lines = text.split('\n');
-                    // Assumir que username está na coluna 3 (índice 2)
-                    for (let i = 1; i < lines.length; i++) { // Pular cabeçalho
-                        const cols = lines[i].split(',');
-                        if (cols.length >= 3 && cols[2]) {
-                            // Remover @ e aspas
-                            const username = cols[2].replace(/[@"]/g, '').trim();
-                            if (username && username !== 'Username') usernames.push(username);
-                        }
-                    }
-                } else if (formato === 'json') {
-                    const data = JSON.parse(text);
-                    if (Array.isArray(data)) {
-                        usernames = data.map(item => item.username).filter(Boolean);
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao extrair usernames:', error);
-            }
-
-            return usernames;
-        }
-
-        // Função para enviar usernames para API
-        async function enviarUsernamesParaCache(usernames) {
-            const response = await fetch('/api/importar-cache', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ usernames })
-            });
-
-            return await response.json();
-        }
-
-        // Upload de cache (múltiplos arquivos)
-        document.getElementById('cacheUpload').addEventListener('change', async (e) => {
-            const files = Array.from(e.target.files);
-            if (files.length === 0) return;
-
-            const statusEl = document.getElementById('cacheStatus');
-            statusEl.textContent = `⏳ Processando ${files.length} arquivo(s)...`;
+            arquivoPlanilha = file;
+            document.getElementById('btnProcessar').disabled = true;
+            document.getElementById('previewSection').style.display = 'none';
 
             try {
-                let todosUsernames = [];
+                const formData = new FormData();
+                formData.append('planilha', file);
 
-                // Processar cada arquivo
-                for (const file of files) {
-                    const text = await file.text();
-                    let formato = 'csv';
+                const response = await fetch('/api/preview-planilha', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                    if (file.name.endsWith('.json')) {
-                        formato = 'json';
+                const data = await response.json();
+
+                if (data.sucesso) {
+                    // Mostrar preview
+                    document.getElementById('previewSection').style.display = 'block';
+                    document.getElementById('previewTotal').textContent = `✅ ${data.total} empresas encontradas na planilha`;
+                    document.getElementById('previewColunas').textContent = `Colunas: ${data.colunas.filter(c => c).join(', ')}`;
+
+                    // Criar tabela de preview
+                    let previewHtml = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+                    previewHtml += '<thead><tr>';
+                    ['Razão Social', 'Nome Fantasia', 'CNPJ', 'Município'].forEach(col => {
+                        previewHtml += `<th style="background: #667eea; color: white; padding: 8px; text-align: left;">${col}</th>`;
+                    });
+                    previewHtml += '</tr></thead><tbody>';
+
+                    data.preview.forEach(emp => {
+                        previewHtml += '<tr>';
+                        previewHtml += `<td style="padding: 6px; border-bottom: 1px solid #eee;">${emp.razaoSocial || '-'}</td>`;
+                        previewHtml += `<td style="padding: 6px; border-bottom: 1px solid #eee;">${emp.nomeFantasia || '-'}</td>`;
+                        previewHtml += `<td style="padding: 6px; border-bottom: 1px solid #eee;">${emp.cnpj || '-'}</td>`;
+                        previewHtml += `<td style="padding: 6px; border-bottom: 1px solid #eee;">${emp.municipio || '-'}</td>`;
+                        previewHtml += '</tr>';
+                    });
+
+                    if (data.total > 10) {
+                        previewHtml += `<tr><td colspan="4" style="padding: 10px; text-align: center; font-style: italic; color: #666;">... e mais ${data.total - 10} empresas</td></tr>`;
                     }
 
-                    const usernames = extrairUsernamesDeTexto(text, formato);
-                    todosUsernames = todosUsernames.concat(usernames);
-                    console.log(`Arquivo ${file.name}: ${usernames.length} usernames`);
-                }
+                    previewHtml += '</tbody></table>';
+                    document.getElementById('previewTable').innerHTML = previewHtml;
 
-                // Enviar tudo para API
-                const result = await enviarUsernamesParaCache(todosUsernames);
-
-                if (result.sucesso) {
-                    statusEl.textContent = `✅ ${files.length} arquivo(s): ${result.novos} novos usernames (total: ${result.total})`;
+                    // Habilitar botão
+                    document.getElementById('btnProcessar').disabled = false;
                 } else {
-                    statusEl.textContent = '❌ Erro ao importar: ' + result.erro;
+                    alert('Erro ao processar planilha: ' + data.erro);
                 }
 
             } catch (error) {
-                console.error('Erro ao processar arquivos:', error);
-                statusEl.textContent = '❌ Erro ao processar arquivos';
+                console.error('Erro ao fazer preview:', error);
+                alert('Erro ao processar planilha');
             }
         });
 
-        // Processar dados colados
-        document.getElementById('btnProcessarPaste').addEventListener('click', async () => {
-            const textarea = document.getElementById('cachePaste');
-            const text = textarea.value.trim();
-            const statusEl = document.getElementById('pasteStatus');
+        // Processar planilha
+        document.getElementById('planilhaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-            if (!text) {
-                statusEl.textContent = '⚠️ Cole os dados primeiro';
+            if (!arquivoPlanilha) {
+                alert('Selecione uma planilha primeiro');
                 return;
             }
 
-            statusEl.textContent = '⏳ Processando dados...';
-
-            try {
-                let usernames = [];
-
-                // Tentar detectar formato
-                if (text.startsWith('[') || text.startsWith('{')) {
-                    // Provavelmente JSON
-                    usernames = extrairUsernamesDeTexto(text, 'json');
-                } else {
-                    // Provavelmente CSV
-                    usernames = extrairUsernamesDeTexto(text, 'csv');
-                }
-
-                if (usernames.length === 0) {
-                    statusEl.textContent = '⚠️ Nenhum username encontrado no texto';
-                    return;
-                }
-
-                console.log(`Dados colados: ${usernames.length} usernames encontrados`);
-
-                // Enviar para API
-                const result = await enviarUsernamesParaCache(usernames);
-
-                if (result.sucesso) {
-                    statusEl.textContent = `✅ ${result.novos} novos usernames importados (total: ${result.total})`;
-                    textarea.value = ''; // Limpar textarea
-                } else {
-                    statusEl.textContent = '❌ Erro ao importar: ' + result.erro;
-                }
-
-            } catch (error) {
-                console.error('Erro ao processar dados colados:', error);
-                statusEl.textContent = '❌ Erro ao processar dados';
-            }
-        });
-
-        document.getElementById('prospectorForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const tipoEstabelecimento = document.getElementById('tipoEstabelecimento').value;
-            const cidade = document.getElementById('cidade').value;
-            const limite = document.getElementById('limite').value;
             const modeloIA = document.getElementById('modeloIA').value;
-            const pularProcessadas = document.getElementById('pularProcessadas').checked;
 
             // Limpar resultados anteriores
             resultadosAtuais = [];
-            estatisticas = { puladas: 0, novas: 0 };
 
-            // Mostrar loading e resultados vazios
+            // Mostrar loading
             document.getElementById('loading').classList.add('show');
-            document.getElementById('loading').querySelector('p:last-child').textContent = 'Iniciando prospecção...';
-            document.getElementById('btnIniciar').disabled = true;
+            document.getElementById('loading').querySelector('p:last-child').textContent = 'Iniciando processamento...';
+            document.getElementById('btnProcessar').disabled = true;
             document.getElementById('results').classList.add('show');
             document.getElementById('resultsContent').innerHTML = '<p>Processando...</p>';
 
-            // Fazer requisição POST para obter URL de SSE
-            const response = await fetch('/api/iniciar-prospeccao', {
+            // Criar FormData
+            const formData = new FormData();
+            formData.append('planilha', arquivoPlanilha);
+            formData.append('modeloIA', modeloIA);
+
+            // Fazer requisição POST
+            const response = await fetch('/api/processar-planilha', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    tipoEstabelecimento,
-                    cidade,
-                    limite: limite || null,
-                    modeloIA,
-                    pularProcessadas
-                })
+                body: formData
             });
 
             const reader = response.body.getReader();
@@ -789,38 +676,31 @@
                         try {
                             const data = JSON.parse(line.replace('data: ', ''));
 
-                            if (data.tipo === 'progresso') {
+                            if (data.tipo === 'info') {
+                                document.getElementById('loading').querySelector('p:last-child').textContent = data.dados.mensagem;
+
+                            } else if (data.tipo === 'progresso') {
                                 const { resultado, atual, total } = data.dados;
                                 resultadosAtuais.push(resultado);
 
                                 // Atualizar mensagem de loading
                                 document.getElementById('loading').querySelector('p:last-child').textContent =
-                                    `Processando estabelecimento ${atual} de ${total}...`;
+                                    `Processando empresa ${atual} de ${total}...`;
 
                                 // Atualizar resultados em tempo real
                                 mostrarResultadosProgressivo(resultadosAtuais, atual, total);
 
-                            } else if (data.tipo === 'estatisticas') {
-                                const { puladas, novas } = data.dados;
-                                estatisticas = { puladas, novas };
-
-                                // Atualizar mensagem de loading com estatísticas
-                                if (puladas > 0 || novas > 0) {
-                                    document.getElementById('loading').querySelector('p:first-of-type').innerHTML =
-                                        `<strong>Processando... (✅ ${novas} novas | ⏭️ ${puladas} puladas)</strong>`;
-                                }
-
                             } else if (data.tipo === 'concluido') {
                                 // Esconder loading
                                 document.getElementById('loading').classList.remove('show');
-                                document.getElementById('btnIniciar').disabled = false;
+                                document.getElementById('btnProcessar').disabled = false;
 
                                 // Mostrar resultados finais
                                 mostrarResultadosProgressivo(resultadosAtuais, resultadosAtuais.length, resultadosAtuais.length);
 
                             } else if (data.tipo === 'erro') {
                                 document.getElementById('loading').classList.remove('show');
-                                document.getElementById('btnIniciar').disabled = false;
+                                document.getElementById('btnProcessar').disabled = false;
                                 alert('Erro: ' + data.dados.erro);
                             }
                         } catch (e) {
@@ -831,7 +711,7 @@
             } catch (error) {
                 console.error('Erro:', error);
                 document.getElementById('loading').classList.remove('show');
-                document.getElementById('btnIniciar').disabled = false;
+                document.getElementById('btnProcessar').disabled = false;
                 alert('Erro ao processar requisição');
             }
         });
@@ -846,7 +726,7 @@
 
             let html = `
                 <p style="font-size: 18px; font-weight: 600; margin-bottom: 15px;">
-                    📊 Progresso: ${atual} de ${total} estabelecimentos processados
+                    📊 Progresso: ${atual} de ${total} empresas processadas
                 </p>
                 <div class="export-buttons">
                     <button class="btn-export btn-export-csv" onclick="exportarCSV()">
@@ -864,33 +744,28 @@
                         <thead>
                             <tr>
                                 <th rowspan="2" style="vertical-align: middle;">#</th>
+                                <th colspan="4" class="group-header">🏢 Dados Empresa</th>
                                 <th colspan="3" class="group-header">📱 Instagram</th>
-                                <th colspan="5" class="group-header">💬 Contatos</th>
-                                <th colspan="7" class="group-header">🏢 Dados CNPJ</th>
-                                <th colspan="2" class="group-header">📍 Google Meu Negócio</th>
+                                <th colspan="4" class="group-header">💬 Contatos</th>
+                                <th colspan="3" class="group-header">📍 Google Meu Negócio</th>
                             </tr>
                             <tr>
+                                <!-- Dados Empresa -->
+                                <th class="group-cnpj">Nome Identificado</th>
+                                <th class="group-cnpj">Razão Social</th>
+                                <th class="group-cnpj">CNPJ</th>
+                                <th class="group-cnpj">Município/UF</th>
+
                                 <!-- Instagram -->
-                                <th class="group-instagram">Nome</th>
                                 <th class="group-instagram">Username</th>
                                 <th class="group-instagram">Perfil</th>
+                                <th class="group-instagram">Linktree</th>
 
                                 <!-- Contatos -->
                                 <th class="group-contatos">Telefone Bio</th>
                                 <th class="group-contatos">WhatsApp Bio</th>
-                                <th class="group-contatos">Linktree</th>
-                                <th class="group-contatos">WhatsApp Linktree</th>
-                                <th class="group-contatos">Site Bio</th>
-                                <th class="group-contatos">Site Linktree</th>
-
-                                <!-- CNPJ -->
-                                <th class="group-cnpj">Situação</th>
-                                <th class="group-cnpj">Ativa Desde</th>
-                                <th class="group-cnpj">Tipo</th>
-                                <th class="group-cnpj">Porte</th>
-                                <th class="group-cnpj">Capital Social</th>
-                                <th class="group-cnpj">Sócios/Admin</th>
-                                <th class="group-cnpj">Link CNPJ</th>
+                                <th class="group-contatos">Site</th>
+                                <th class="group-contatos">Tel. Planilha</th>
 
                                 <!-- Google Meu Negócio -->
                                 <th class="group-gmb">Link GMB</th>
@@ -902,57 +777,32 @@
             `;
 
             resultados.forEach((resultado, index) => {
-                // Formatar sócios/administradores
-                const socios = resultado.sociosAdministradores && resultado.sociosAdministradores.length > 0
-                    ? resultado.sociosAdministradores.join(', ')
-                    : '-';
-
-                // Formatar WhatsApp do Linktree
-                let whatsappLinktree = '-';
-                if (resultado.whatsappLinkTree) {
-                    const numero = resultado.numeroWhatsappLinkTree || 'Ver';
-                    whatsappLinktree = `<a href="${resultado.whatsappLinkTree}" target="_blank">📱 ${numero}</a>`;
-                }
-
-                // Formatar situação com cor
-                let situacaoHtml = '-';
-                if (resultado.situacao) {
-                    const situacaoUpper = resultado.situacao.toUpperCase();
-                    let classe = '';
-                    if (situacaoUpper.includes('ATIVA')) classe = 'status-ativa';
-                    else if (situacaoUpper.includes('INAPTA')) classe = 'status-inapta';
-                    else if (situacaoUpper.includes('BAIXADA')) classe = 'status-baixada';
-                    situacaoHtml = `<span class="${classe}">${resultado.situacao}</span>`;
-                }
+                // Município/UF
+                const municipioUf = [resultado.municipio, resultado.uf].filter(Boolean).join('/');
 
                 html += `
                     <tr>
                         <td><strong>${index + 1}</strong></td>
 
+                        <!-- Dados Empresa -->
+                        <td class="group-cnpj"><strong>${resultado.nomeIdentificado || '-'}</strong></td>
+                        <td class="group-cnpj" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${resultado.razaoSocial || ''}">${resultado.razaoSocial || '-'}</td>
+                        <td class="group-cnpj">${resultado.cnpj || '-'}</td>
+                        <td class="group-cnpj">${municipioUf || '-'}</td>
+
                         <!-- Instagram -->
-                        <td class="group-instagram">${resultado.nome || '-'}</td>
-                        <td class="group-instagram">@${resultado.username || '-'}</td>
-                        <td class="group-instagram"><a href="${resultado.instagramUrl}" target="_blank">🔗 Perfil</a></td>
+                        <td class="group-instagram">${resultado.instagramUsername ? `@${resultado.instagramUsername}` : '-'}</td>
+                        <td class="group-instagram">${resultado.instagramUrl ? `<a href="${resultado.instagramUrl}" target="_blank">🔗 Perfil</a>` : '-'}</td>
+                        <td class="group-instagram">${resultado.linkTreeBio ? `<a href="${resultado.linkTreeBio}" target="_blank">🌳 Ver</a>` : '-'}</td>
 
                         <!-- Contatos -->
-                        <td class="group-contatos">${resultado.contato ? `<span class="badge">📱 ${resultado.contato}${resultado.contatoTemWhatsApp === true ? ' ✅WA' : resultado.contatoTemWhatsApp === false ? ' ❌WA' : ''}</span>` : '-'}</td>
+                        <td class="group-contatos">${resultado.contatoBio ? `<span class="badge">📱 ${resultado.contatoBio}${resultado.contatoBioTemWhatsApp === true ? ' ✅WA' : resultado.contatoBioTemWhatsApp === false ? ' ❌WA' : ''}</span>` : '-'}</td>
                         <td class="group-contatos">${resultado.whatsappBio ? `<a href="${resultado.whatsappBio}" target="_blank">💬 ${resultado.numeroWhatsappBio || 'Ver'}</a>` : '-'}</td>
-                        <td class="group-contatos">${resultado.linkTree ? `<a href="${resultado.linkTree}" target="_blank">🌳 Ver</a>` : '-'}</td>
-                        <td class="group-contatos">${whatsappLinktree}</td>
-                        <td class="group-contatos">${resultado.siteProprio ? `<a href="${resultado.siteProprio}" target="_blank">🌐 Ver</a>` : '-'}</td>
-                        <td class="group-contatos">${resultado.siteProprioLinktree ? `<a href="${resultado.siteProprioLinktree}" target="_blank">🌐 Ver</a>` : '-'}</td>
-
-                        <!-- CNPJ -->
-                        <td class="group-cnpj">${situacaoHtml}</td>
-                        <td class="group-cnpj">${resultado.ativaDesde || '-'}</td>
-                        <td class="group-cnpj">${resultado.tipoUnidade || '-'}</td>
-                        <td class="group-cnpj">${resultado.enquadramentoPorte || '-'}</td>
-                        <td class="group-cnpj">${resultado.capitalSocial || '-'}</td>
-                        <td class="group-cnpj" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${socios}">${socios}</td>
-                        <td class="group-cnpj">${resultado.cnpjUrl ? `<a href="${resultado.cnpjUrl}" target="_blank">🔗 Ver</a>` : '-'}</td>
+                        <td class="group-contatos">${resultado.siteProprioBio ? `<a href="${resultado.siteProprioBio}" target="_blank">🌐 Ver</a>` : '-'}</td>
+                        <td class="group-contatos">${resultado.telefone || '-'}</td>
 
                         <!-- Google Meu Negócio -->
-                        <td class="group-gmb">${resultado.linkGMB ? `<a href="${resultado.linkGMB}" target="_blank">🔗 Ver GMB</a>` : '-'}</td>
+                        <td class="group-gmb">${resultado.linkGMB ? `<a href="${resultado.linkGMB}" target="_blank">🔗 Ver</a>` : '-'}</td>
                         <td class="group-gmb">${resultado.telefoneGMB ? `📞 ${resultado.telefoneGMB}${resultado.telefoneGMBTemWhatsApp === true ? ' ✅WA' : resultado.telefoneGMBTemWhatsApp === false ? ' ❌WA' : ''}` : '-'}</td>
                         <td class="group-gmb" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${resultado.horarioFuncionamento || ''}">${resultado.horarioFuncionamento || '-'}</td>
                     </tr>
@@ -973,25 +823,21 @@
             // Cabeçalhos do CSV
             const headers = [
                 'Número',
-                'Nome',
-                'Username',
+                'Nome Identificado',
+                'Razão Social',
+                'Nome Fantasia',
+                'CNPJ',
+                'Município',
+                'UF',
+                'Telefone Planilha',
+                'Instagram Username',
                 'Instagram URL',
                 'Telefone Bio',
                 'Tel Bio Tem WhatsApp',
                 'WhatsApp Bio (Link)',
                 'WhatsApp Bio (Número)',
-                'Linktree',
-                'WhatsApp Linktree',
-                'Número WhatsApp Linktree',
-                'Site Próprio Bio',
-                'Site Próprio Linktree',
-                'Situação',
-                'Ativa Desde',
-                'Tipo Unidade',
-                'Porte',
-                'Capital Social',
-                'Sócios/Administradores',
-                'CNPJ URL',
+                'Site Bio',
+                'Linktree Bio',
                 'Link GMB',
                 'Telefone GMB',
                 'Tel GMB Tem WhatsApp',
@@ -1002,31 +848,23 @@
             let csv = headers.join(',') + '\n';
 
             resultadosAtuais.forEach((resultado, index) => {
-                const socios = resultado.sociosAdministradores && resultado.sociosAdministradores.length > 0
-                    ? '"' + resultado.sociosAdministradores.join('; ') + '"'
-                    : '';
-
                 const linha = [
                     index + 1,
-                    '"' + (resultado.nome || '') + '"',
-                    '"' + (resultado.username || '') + '"',
+                    '"' + (resultado.nomeIdentificado || '') + '"',
+                    '"' + (resultado.razaoSocial || '') + '"',
+                    '"' + (resultado.nomeFantasia || '') + '"',
+                    resultado.cnpj || '',
+                    '"' + (resultado.municipio || '') + '"',
+                    resultado.uf || '',
+                    resultado.telefone || '',
+                    resultado.instagramUsername || '',
                     resultado.instagramUrl || '',
-                    resultado.contato || '',
-                    resultado.contatoTemWhatsApp === true ? 'Sim' : resultado.contatoTemWhatsApp === false ? 'Não' : '',
+                    resultado.contatoBio || '',
+                    resultado.contatoBioTemWhatsApp === true ? 'Sim' : resultado.contatoBioTemWhatsApp === false ? 'Não' : '',
                     resultado.whatsappBio || '',
                     resultado.numeroWhatsappBio || '',
-                    resultado.linkTree || '',
-                    resultado.whatsappLinkTree || '',
-                    resultado.numeroWhatsappLinkTree || '',
-                    resultado.siteProprio || '',
-                    resultado.siteProprioLinktree || '',
-                    resultado.situacao || '',
-                    resultado.ativaDesde || '',
-                    resultado.tipoUnidade || '',
-                    resultado.enquadramentoPorte || '',
-                    resultado.capitalSocial || '',
-                    socios,
-                    resultado.cnpjUrl || '',
+                    resultado.siteProprioBio || '',
+                    resultado.linkTreeBio || '',
                     resultado.linkGMB || '',
                     resultado.telefoneGMB || '',
                     resultado.telefoneGMBTemWhatsApp === true ? 'Sim' : resultado.telefoneGMBTemWhatsApp === false ? 'Não' : '',
@@ -1037,7 +875,7 @@
             });
 
             // Download do arquivo
-            baixarArquivo(csv, 'prospeccao-instagram.csv', 'text/csv');
+            baixarArquivo(csv, 'empresas-processadas.csv', 'text/csv');
         }
 
         function exportarJSON() {
@@ -1047,7 +885,7 @@
             }
 
             const json = JSON.stringify(resultadosAtuais, null, 2);
-            baixarArquivo(json, 'prospeccao-instagram.json', 'application/json');
+            baixarArquivo(json, 'empresas-processadas.json', 'application/json');
         }
 
         function exportarTXT() {
@@ -1057,51 +895,37 @@
             }
 
             let txt = '================================================\n';
-            txt += '        RELATÓRIO DE PROSPECÇÃO - INSTAGRAM\n';
+            txt += '     RELATÓRIO DE PROCESSAMENTO - EMPRESAS\n';
             txt += '================================================\n\n';
-            txt += `Total de estabelecimentos: ${resultadosAtuais.length}\n`;
+            txt += `Total de empresas: ${resultadosAtuais.length}\n`;
             txt += `Data: ${new Date().toLocaleString('pt-BR')}\n\n`;
 
             resultadosAtuais.forEach((resultado, index) => {
                 txt += '================================================\n';
-                txt += `${index + 1}. ${resultado.nome || 'N/A'}\n`;
+                txt += `${index + 1}. ${resultado.nomeIdentificado || 'N/A'}\n`;
                 txt += '================================================\n\n';
 
+                txt += '🏢 DADOS DA EMPRESA:\n';
+                txt += `   Nome Identificado: ${resultado.nomeIdentificado || 'N/A'}\n`;
+                txt += `   Razão Social: ${resultado.razaoSocial || 'N/A'}\n`;
+                txt += `   Nome Fantasia: ${resultado.nomeFantasia || 'N/A'}\n`;
+                txt += `   CNPJ: ${resultado.cnpj || 'N/A'}\n`;
+                txt += `   Município/UF: ${resultado.municipio || 'N/A'}/${resultado.uf || 'N/A'}\n`;
+                txt += `   Telefone (Planilha): ${resultado.telefone || 'N/A'}\n\n`;
+
                 txt += '📱 INSTAGRAM:\n';
-                txt += `   Nome: ${resultado.nome || 'N/A'}\n`;
-                txt += `   Username: @${resultado.username || 'N/A'}\n`;
-                txt += `   Perfil: ${resultado.instagramUrl || 'N/A'}\n\n`;
+                txt += `   Username: @${resultado.instagramUsername || 'N/A'}\n`;
+                txt += `   Perfil: ${resultado.instagramUrl || 'N/A'}\n`;
+                txt += `   Linktree: ${resultado.linkTreeBio || 'N/A'}\n\n`;
 
-                txt += '💬 CONTATOS:\n';
-                txt += `   Telefone Bio: ${resultado.contato || 'N/A'}${resultado.contatoTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.contatoTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
+                txt += '💬 CONTATOS (Bio):\n';
+                txt += `   Telefone Bio: ${resultado.contatoBio || 'N/A'}${resultado.contatoBioTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.contatoBioTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
                 txt += `   WhatsApp Bio: ${resultado.whatsappBio || 'N/A'}${resultado.numeroWhatsappBio ? ` (${resultado.numeroWhatsappBio})` : ''}\n`;
-                txt += `   Linktree: ${resultado.linkTree || 'N/A'}\n`;
-                txt += `   WhatsApp Linktree: ${resultado.whatsappLinkTree || 'N/A'}\n`;
-                txt += `   Número WhatsApp Linktree: ${resultado.numeroWhatsappLinkTree || 'N/A'}\n`;
-                txt += `   Site Próprio (Bio): ${resultado.siteProprio || 'N/A'}\n`;
-                txt += `   Site Próprio (Linktree): ${resultado.siteProprioLinktree || 'N/A'}\n\n`;
-
-                txt += '🏢 DADOS CNPJ:\n';
-                txt += `   Situação: ${resultado.situacao || 'N/A'}\n`;
-                txt += `   Ativa Desde: ${resultado.ativaDesde || 'N/A'}\n`;
-                txt += `   Tipo de Unidade: ${resultado.tipoUnidade || 'N/A'}\n`;
-                txt += `   Porte: ${resultado.enquadramentoPorte || 'N/A'}\n`;
-                txt += `   Capital Social: ${resultado.capitalSocial || 'N/A'}\n`;
-
-                if (resultado.sociosAdministradores && resultado.sociosAdministradores.length > 0) {
-                    txt += `   Sócios/Administradores:\n`;
-                    resultado.sociosAdministradores.forEach(socio => {
-                        txt += `      - ${socio}\n`;
-                    });
-                } else {
-                    txt += `   Sócios/Administradores: N/A\n`;
-                }
-
-                txt += `   CNPJ URL: ${resultado.cnpjUrl || 'N/A'}\n\n`;
+                txt += `   Site Bio: ${resultado.siteProprioBio || 'N/A'}\n\n`;
 
                 txt += '📍 GOOGLE MEU NEGÓCIO:\n';
                 txt += `   Link GMB: ${resultado.linkGMB || 'N/A'}\n`;
-                txt += `   Telefone: ${resultado.telefoneGMB || 'N/A'}${resultado.telefoneGMBTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.telefoneGMBTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
+                txt += `   Telefone GMB: ${resultado.telefoneGMB || 'N/A'}${resultado.telefoneGMBTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.telefoneGMBTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
                 txt += `   Horário de Funcionamento: ${resultado.horarioFuncionamento || 'N/A'}\n\n`;
             });
 
@@ -1109,7 +933,7 @@
             txt += '                   FIM DO RELATÓRIO\n';
             txt += '================================================\n';
 
-            baixarArquivo(txt, 'prospeccao-instagram.txt', 'text/plain');
+            baixarArquivo(txt, 'empresas-processadas.txt', 'text/plain');
         }
 
         function baixarArquivo(conteudo, nomeArquivo, tipoMime) {

@@ -2,14 +2,35 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import multer from 'multer';
 import { ProspectorScraper } from './scraper';
 import { InstagramAuth } from './instagram-auth';
 import { EconodataAuth } from './econodata-auth';
+import { PlanilhaProcessor } from './planilha-processor';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3123;
+
+// Configurar multer para upload de arquivos
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'application/octet-stream' // fallback
+    ];
+    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(xlsx|xls)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos Excel (.xlsx, .xls) são permitidos'));
+    }
+  }
+});
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -195,6 +216,96 @@ app.post('/api/iniciar-prospeccao', async (req, res) => {
     console.error('❌ Erro durante a prospecção:', error.message);
     enviarEvento('erro', { erro: error.message });
     res.end();
+  }
+});
+
+// Rota para processar planilha de empresas
+app.post('/api/processar-planilha', upload.single('planilha'), async (req, res) => {
+  console.log('');
+  console.log('📊 Nova requisição de processamento de planilha recebida');
+
+  if (!req.file) {
+    return res.status(400).json({
+      sucesso: false,
+      erro: 'Nenhum arquivo enviado'
+    });
+  }
+
+  const modeloIA = req.body.modeloIA || 'gemini-2.5-flash';
+
+  console.log('  Arquivo:', req.file.originalname);
+  console.log('  Tamanho:', (req.file.size / 1024).toFixed(2), 'KB');
+  console.log('  Modelo IA:', modeloIA);
+  console.log('');
+
+  // Configurar SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const enviarEvento = (tipo: string, dados: any) => {
+    res.write(`data: ${JSON.stringify({ tipo, dados })}\n\n`);
+  };
+
+  try {
+    const processor = new PlanilhaProcessor({
+      geminiApiKey: process.env.GEMINI_API_KEY!,
+      geminiModel: modeloIA,
+      instagramAuth,
+      onProgresso: (resultado, atual, total) => {
+        enviarEvento('progresso', { resultado, atual, total });
+      }
+    });
+
+    // Ler planilha
+    const empresas = processor.lerPlanilha(req.file.buffer);
+    enviarEvento('info', { total: empresas.length, mensagem: `${empresas.length} empresas encontradas na planilha` });
+
+    // Processar
+    const resultados = await processor.executar(empresas);
+
+    enviarEvento('concluido', { resultados });
+    res.end();
+
+  } catch (error: any) {
+    console.error('❌ Erro durante o processamento:', error.message);
+    enviarEvento('erro', { erro: error.message });
+    res.end();
+  }
+});
+
+// Rota para preview da planilha (sem processar)
+app.post('/api/preview-planilha', upload.single('planilha'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      sucesso: false,
+      erro: 'Nenhum arquivo enviado'
+    });
+  }
+
+  try {
+    const processor = new PlanilhaProcessor({
+      geminiApiKey: process.env.GEMINI_API_KEY!,
+      geminiModel: 'gemini-2.5-flash',
+      instagramAuth
+    });
+
+    const empresas = processor.lerPlanilha(req.file.buffer);
+
+    // Retornar preview (primeiras 10 empresas)
+    res.json({
+      sucesso: true,
+      total: empresas.length,
+      preview: empresas.slice(0, 10),
+      colunas: Object.keys(empresas[0] || {})
+    });
+
+  } catch (error: any) {
+    console.error('❌ Erro ao fazer preview:', error.message);
+    res.status(500).json({
+      sucesso: false,
+      erro: error.message
+    });
   }
 });
 
