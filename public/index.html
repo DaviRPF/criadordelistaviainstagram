@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Criador de Lista via Instagram</title>
+    <title>Processador de Empresas</title>
     <style>
         * {
             margin: 0;
@@ -12,438 +12,704 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
             min-height: 100vh;
+        }
+
+        /* Layout Principal */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: #161b22;
+            border-right: 1px solid #30363d;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            max-height: 100vh;
+            position: sticky;
+            top: 0;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+        .sidebar h1 {
+            font-size: 1.3em;
+            color: #58a6ff;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
+        /* Cards */
         .card {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            margin-bottom: 30px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
         }
 
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2.5em;
+        .card h2 {
+            font-size: 0.95em;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
+        .card.disabled {
+            opacity: 0.5;
+            pointer-events: none;
         }
 
+        /* Status Badge */
+        .status-badge {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge.offline {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid rgba(248, 81, 73, 0.4);
+            color: #f85149;
+        }
+
+        .status-badge.online {
+            background: rgba(63, 185, 80, 0.1);
+            border: 1px solid rgba(63, 185, 80, 0.4);
+            color: #3fb950;
+        }
+
+        /* Form Elements */
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-bottom: 6px;
+            font-weight: 500;
         }
 
-        input {
+        input[type="file"] {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s;
+            padding: 12px;
+            background: #0d1117;
+            border: 1px dashed #30363d;
+            border-radius: 6px;
+            color: #e6edf3;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        input[type="file"]:hover {
+            border-color: #58a6ff;
+            background: rgba(88, 166, 255, 0.05);
         }
 
-        .small-text {
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #e6edf3;
             font-size: 0.9em;
-            color: #666;
-            margin-top: 5px;
+            cursor: pointer;
         }
 
+        select:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+        }
+
+        /* Buttons */
         button {
             width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 12px 16px;
             border: none;
-            border-radius: 10px;
-            font-size: 18px;
+            border-radius: 6px;
+            font-size: 0.95em;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        .btn-primary {
+            background: #238636;
+            color: white;
         }
 
-        button:active {
-            transform: translateY(0);
+        .btn-primary:hover:not(:disabled) {
+            background: #2ea043;
         }
 
-        button:disabled {
-            opacity: 0.6;
+        .btn-primary:disabled {
+            background: #21262d;
+            color: #484f58;
             cursor: not-allowed;
-            transform: none;
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
+        .btn-secondary {
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
         }
 
-        .loading.show {
-            display: block;
+        .btn-secondary:hover {
+            background: #30363d;
         }
 
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+        /* Preview Section */
+        .preview-section {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 14px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
         }
 
-        .results {
-            display: none;
+        .preview-header h3 {
+            font-size: 0.9em;
+            color: #3fb950;
         }
 
-        .results.show {
-            display: block;
+        .preview-count {
+            background: #238636;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
         }
 
-        /* Container da tabela com scroll horizontal */
-        .table-container {
-            overflow-x: auto;
-            margin-top: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        .preview-table {
+            max-height: 150px;
+            overflow-y: auto;
         }
 
-        table {
+        .preview-table table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1400px;
-            background: white;
+            font-size: 0.8em;
         }
 
-        /* Cabeçalhos de grupo */
-        th.group-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-weight: 700;
-            text-align: center;
-            padding: 10px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Cabeçalhos de coluna */
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #495057;
-            padding: 12px 10px;
+        .preview-table th,
+        .preview-table td {
+            padding: 6px 8px;
             text-align: left;
-            border-bottom: 2px solid #e9ecef;
-            font-size: 13px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .preview-table th {
+            color: #8b949e;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        /* Header da tabela */
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .results-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .results-title h2 {
+            font-size: 1.2em;
+            color: #e6edf3;
+        }
+
+        .results-count {
+            background: #30363d;
+            color: #8b949e;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+
+        /* Export Buttons */
+        .export-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-export {
+            padding: 8px 14px;
+            font-size: 0.85em;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: auto;
+        }
+
+        .btn-export-csv {
+            background: #238636;
+            color: white;
+        }
+
+        .btn-export-json {
+            background: #1f6feb;
+            color: white;
+        }
+
+        .btn-export-txt {
+            background: #6e7681;
+            color: white;
+        }
+
+        .btn-export:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Tabela Principal */
+        .table-wrapper {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        table.main-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        table.main-table thead {
+            background: #21262d;
             position: sticky;
             top: 0;
             z-index: 10;
         }
 
-        /* Colunas específicas */
-        th:first-child, td:first-child {
-            text-align: center;
-            font-weight: 700;
-            color: #667eea;
-            width: 40px;
-        }
-
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #e9ecef;
-            font-size: 13px;
-            color: #495057;
-        }
-
-        /* Linhas alternadas */
-        tbody tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-
-        tbody tr:hover {
-            background: #e7f1ff;
-            transition: background 0.2s;
-        }
-
-        /* Bordas entre grupos */
-        .group-instagram {
-            border-left: 3px solid #E4405F;
-        }
-
-        .group-contatos {
-            border-left: 3px solid #25D366;
-        }
-
-        .group-cnpj {
-            border-left: 3px solid #667eea;
-        }
-
-        .group-gmb {
-            border-left: 3px solid #ffc107;
-        }
-
-        /* Links */
-        td a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        td a:hover {
-            color: #764ba2;
-            text-decoration: underline;
-        }
-
-        /* Badge para contato */
-        .badge {
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
+        table.main-table th {
+            padding: 12px 14px;
+            text-align: left;
+            font-size: 0.8em;
             font-weight: 600;
-            display: inline-block;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #30363d;
             white-space: nowrap;
         }
 
-        /* Status de situação com cores */
-        .status-ativa {
-            color: #28a745;
-            font-weight: 600;
+        table.main-table th.group-header {
+            text-align: center;
+            font-size: 0.75em;
+            padding: 8px;
+            border-bottom: 2px solid;
         }
 
-        .status-inapta {
-            color: #ffc107;
-            font-weight: 600;
+        .group-empresa { border-color: #a371f7 !important; color: #a371f7; }
+        .group-instagram { border-color: #f778ba !important; color: #f778ba; }
+        .group-contatos { border-color: #3fb950 !important; color: #3fb950; }
+        .group-gmb { border-color: #f0883e !important; color: #f0883e; }
+
+        table.main-table tbody tr {
+            border-bottom: 1px solid #21262d;
+            transition: background 0.15s;
         }
 
-        .status-baixada {
-            color: #dc3545;
-            font-weight: 600;
+        table.main-table tbody tr:hover {
+            background: rgba(88, 166, 255, 0.04);
         }
 
-        /* Botões de exportar */
-        .export-buttons {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+        table.main-table tbody tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.01);
         }
 
-        .btn-export {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
+        table.main-table tbody tr:nth-child(even):hover {
+            background: rgba(88, 166, 255, 0.04);
+        }
+
+        table.main-table td {
+            padding: 12px 14px;
+            font-size: 0.9em;
+            color: #c9d1d9;
+            vertical-align: middle;
+        }
+
+        table.main-table td:first-child {
+            color: #6e7681;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+            text-align: center;
+            width: 50px;
+        }
+
+        /* Cell styles */
+        .cell-name {
+            font-weight: 600;
+            color: #e6edf3;
+        }
+
+        .cell-truncate {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cell-link {
+            color: #58a6ff;
+            text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
         }
 
-        .btn-export-csv {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-        }
-
-        .btn-export-csv:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
-        }
-
-        .btn-export-json {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-export-json:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-export-txt {
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-            color: white;
-        }
-
-        .btn-export-txt:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
-        }
-
-        a {
-            color: #667eea;
-            text-decoration: none;
-        }
-
-        a:hover {
+        .cell-link:hover {
             text-decoration: underline;
         }
 
-        .badge {
-            display: inline-block;
+        .cell-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             padding: 4px 8px;
-            background: #4caf50;
-            color: white;
-            border-radius: 5px;
+            border-radius: 4px;
             font-size: 0.85em;
+            font-weight: 500;
         }
 
-        .status-badge {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        .badge-phone {
+            background: rgba(63, 185, 80, 0.15);
+            color: #3fb950;
+        }
+
+        .badge-whatsapp {
+            color: #3fb950;
+        }
+
+        .badge-no-whatsapp {
+            color: #f85149;
+        }
+
+        .cell-empty {
+            color: #484f58;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 17, 23, 0.9);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-content {
             text-align: center;
-            font-weight: 600;
-            background: #fee;
-            color: #c33;
         }
 
-        .status-badge.logado {
-            background: #efe;
-            color: #3c3;
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #30363d;
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
         }
 
-        h2 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 1.8em;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.1em;
+            color: #e6edf3;
+            margin-bottom: 8px;
+        }
+
+        .loading-subtext {
+            font-size: 0.9em;
+            color: #8b949e;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: calc(100vh - 120px);
+            color: #8b949e;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.2em;
+            margin-bottom: 8px;
+            color: #c9d1d9;
+        }
+
+        .empty-state p {
+            font-size: 0.95em;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 4px;
+            background: #30363d;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #238636, #3fb950);
+            transition: width 0.3s ease;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        /* Small text */
+        .text-muted {
+            font-size: 0.8em;
+            color: #6e7681;
+            margin-top: 4px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Card de Login Instagram -->
-        <div class="card" id="loginCard">
-            <h2>🔐 Login Instagram</h2>
-            <p class="subtitle">Faça login no Instagram antes de começar a prospecção</p>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h1>
+                <span>📊</span>
+                Processador de Empresas
+            </h1>
 
-            <div class="status-badge" id="loginStatus">
-                <span>❌ Não logado</span>
-            </div>
-
-            <div id="loginForm">
-                <p class="small-text" style="margin-bottom: 15px;">
-                    Um navegador será aberto. Faça login no Instagram normalmente e depois <strong>feche o navegador</strong> quando terminar.
-                </p>
-
-                <button type="button" id="btnLogin">🌐 Abrir Navegador para Login</button>
-            </div>
-        </div>
-
-        <!-- Card de Login Econodata -->
-        <div class="card" id="loginEconodataCard">
-            <h2>🔐 Login Econodata</h2>
-            <p class="subtitle">Faça login no Econodata para acessar dados completos de CNPJ (opcional)</p>
-
-            <div class="status-badge" id="loginEconodataStatus">
-                <span>❌ Não logado</span>
-            </div>
-
-            <div id="loginEconodataForm">
-                <p class="small-text" style="margin-bottom: 15px;">
-                    Um navegador será aberto. Faça login no Econodata normalmente e depois <strong>feche o navegador</strong> quando terminar.
-                </p>
-
-                <button type="button" id="btnLoginEconodata">🌐 Abrir Navegador para Login</button>
-            </div>
-        </div>
-
-        <!-- Card de Upload de Planilha -->
-        <div class="card" id="planilhaCard" style="opacity: 0.5; pointer-events: none;">
-            <h1>📊 Processador de Planilha</h1>
-            <p class="subtitle">Envie uma planilha com dados de empresas da Receita Federal</p>
-
-            <form id="planilhaForm">
-                <div class="form-group">
-                    <label for="planilhaUpload">📁 Selecionar Planilha (Excel)</label>
-                    <input
-                        type="file"
-                        id="planilhaUpload"
-                        accept=".xlsx,.xls"
-                        required
-                        style="padding: 12px; background: #f8f9fa; border: 2px dashed #667eea; border-radius: 10px; cursor: pointer;"
-                    >
-                    <p class="small-text">Formatos aceitos: .xlsx, .xls (máx. 10MB)</p>
+            <!-- Login Instagram -->
+            <div class="card" id="loginCard">
+                <h2>🔐 Login Instagram</h2>
+                <div class="status-badge offline" id="loginStatus">
+                    <span>Não conectado</span>
                 </div>
+                <div id="loginForm" style="margin-top: 12px;">
+                    <p class="text-muted" style="margin-bottom: 12px;">
+                        Faça login no Instagram para acessar os perfis
+                    </p>
+                    <button class="btn-secondary" id="btnLogin">
+                        🌐 Abrir Navegador
+                    </button>
+                </div>
+            </div>
 
-                <div id="previewSection" style="display: none; margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 10px;">📋 Preview da Planilha</h3>
-                    <div id="previewInfo" style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
-                        <p id="previewTotal" style="font-weight: 600;"></p>
-                        <p id="previewColunas" style="font-size: 12px; color: #666;"></p>
+            <!-- Login Econodata -->
+            <div class="card" id="loginEconodataCard">
+                <h2>🏢 Login Econodata</h2>
+                <div class="status-badge offline" id="loginEconodataStatus">
+                    <span>Não conectado</span>
+                </div>
+                <div id="loginEconodataForm" style="margin-top: 12px;">
+                    <p class="text-muted" style="margin-bottom: 12px;">
+                        Opcional - para dados completos de CNPJ
+                    </p>
+                    <button class="btn-secondary" id="btnLoginEconodata">
+                        🌐 Abrir Navegador
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upload Planilha -->
+            <div class="card disabled" id="planilhaCard">
+                <h2>📁 Carregar Planilha</h2>
+
+                <form id="planilhaForm">
+                    <div class="form-group">
+                        <input
+                            type="file"
+                            id="planilhaUpload"
+                            accept=".xlsx,.xls"
+                            required
+                        >
+                        <p class="text-muted">Excel (.xlsx, .xls) - máx 10MB</p>
                     </div>
-                    <div id="previewTable" style="overflow-x: auto; max-height: 200px; overflow-y: auto;"></div>
-                </div>
 
-                <div class="form-group">
-                    <label for="modeloIA">🤖 Modelo de IA Gemini</label>
-                    <select id="modeloIA" required>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Mais rápido e moderno)</option>
-                        <option value="gemini-2.5-flash-preview-05">Gemini 2.5 Flash Preview (Mais recente, experimental)</option>
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Mais preciso e avançado)</option>
-                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
-                        <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini 2.0 Flash Thinking (Raciocínio avançado)</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Estável e rápido)</option>
-                        <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B (Ultra rápido, menor custo)</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Preciso)</option>
-                    </select>
-                    <p class="small-text">Escolha o modelo de IA que será usado para análise de dados</p>
-                </div>
+                    <div id="previewSection" class="preview-section" style="display: none;">
+                        <div class="preview-header">
+                            <h3>✓ Planilha carregada</h3>
+                            <span class="preview-count" id="previewCount">0 empresas</span>
+                        </div>
+                        <div class="preview-table" id="previewTable"></div>
+                    </div>
 
-                <button type="submit" id="btnProcessar" disabled>🚀 Processar Empresas</button>
-            </form>
+                    <div class="form-group">
+                        <label>Modelo de IA</label>
+                        <select id="modeloIA">
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        </select>
+                    </div>
 
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p><strong>Processando...</strong></p>
-                <p class="small-text">Aguarde enquanto processamos as empresas</p>
+                    <button type="submit" class="btn-primary" id="btnProcessar" disabled>
+                        🚀 Processar Empresas
+                    </button>
+                </form>
             </div>
-        </div>
+        </aside>
 
-        <div class="card results" id="results">
-            <h2>📊 Resultados</h2>
-            <div id="resultsContent"></div>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div id="emptyState" class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <h3>Nenhuma planilha processada</h3>
+                <p>Faça login e carregue uma planilha para começar</p>
+            </div>
+
+            <div id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <div class="results-title">
+                        <h2>Resultados</h2>
+                        <span class="results-count" id="resultsCount">0 empresas</span>
+                    </div>
+                    <div class="export-buttons">
+                        <button class="btn-export btn-export-csv" onclick="exportarCSV()">
+                            📊 CSV
+                        </button>
+                        <button class="btn-export btn-export-json" onclick="exportarJSON()">
+                            📄 JSON
+                        </button>
+                        <button class="btn-export btn-export-txt" onclick="exportarTXT()">
+                            📝 TXT
+                        </button>
+                    </div>
+                </div>
+
+                <div class="progress-bar" id="progressBar" style="display: none;">
+                    <div class="progress-bar-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+
+                <div class="table-wrapper">
+                    <div class="table-scroll">
+                        <table class="main-table">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">#</th>
+                                    <th colspan="4" class="group-header group-empresa">Empresa</th>
+                                    <th colspan="3" class="group-header group-instagram">Instagram</th>
+                                    <th colspan="4" class="group-header group-contatos">Contatos</th>
+                                    <th colspan="3" class="group-header group-gmb">Google Meu Negócio</th>
+                                </tr>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Razão Social</th>
+                                    <th>CNPJ</th>
+                                    <th>Cidade/UF</th>
+                                    <th>@Username</th>
+                                    <th>Perfil</th>
+                                    <th>Linktree</th>
+                                    <th>Tel. Bio</th>
+                                    <th>WhatsApp</th>
+                                    <th>Site</th>
+                                    <th>Tel. Planilha</th>
+                                    <th>Maps</th>
+                                    <th>Telefone</th>
+                                    <th>Horário</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText">Processando...</div>
+            <div class="loading-subtext" id="loadingSubtext">Aguarde</div>
         </div>
     </div>
 
@@ -453,7 +719,6 @@
             try {
                 const response = await fetch('/api/verificar-login');
                 const data = await response.json();
-
                 if (data.logado) {
                     marcarComoLogado();
                 }
@@ -463,53 +728,46 @@
         }
 
         function marcarComoLogado() {
-            document.getElementById('loginStatus').innerHTML = '<span>✅ Logado com sucesso!</span>';
-            document.getElementById('loginStatus').classList.add('logado');
+            document.getElementById('loginStatus').innerHTML = '<span>✓ Conectado</span>';
+            document.getElementById('loginStatus').className = 'status-badge online';
             document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('planilhaCard').style.opacity = '1';
-            document.getElementById('planilhaCard').style.pointerEvents = 'auto';
+            document.getElementById('planilhaCard').classList.remove('disabled');
         }
 
         // Login no Instagram
         document.getElementById('btnLogin').addEventListener('click', async () => {
-            const btnLogin = document.getElementById('btnLogin');
-
-            btnLogin.disabled = true;
-            btnLogin.textContent = '🌐 Abrindo navegador...';
+            const btn = document.getElementById('btnLogin');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Abrindo...';
 
             try {
                 const response = await fetch('/api/login-instagram', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 const data = await response.json();
 
                 if (data.sucesso) {
                     marcarComoLogado();
-                    alert('Login salvo com sucesso! Cookies do Instagram foram salvos.');
                 } else {
                     alert('Erro: ' + data.erro);
-                    btnLogin.disabled = false;
-                    btnLogin.textContent = '🌐 Abrir Navegador para Login';
+                    btn.disabled = false;
+                    btn.innerHTML = '🌐 Abrir Navegador';
                 }
-
             } catch (error) {
                 console.error('Erro:', error);
                 alert('Erro ao fazer login');
-                btnLogin.disabled = false;
-                btnLogin.textContent = '🌐 Abrir Navegador para Login';
+                btn.disabled = false;
+                btn.innerHTML = '🌐 Abrir Navegador';
             }
         });
 
-        // Verificar status de login Econodata ao carregar
+        // Verificar status de login Econodata
         async function verificarLoginEconodata() {
             try {
                 const response = await fetch('/api/verificar-login-econodata');
                 const data = await response.json();
-
                 if (data.logado) {
                     marcarComoLogadoEconodata();
                 }
@@ -519,53 +777,48 @@
         }
 
         function marcarComoLogadoEconodata() {
-            document.getElementById('loginEconodataStatus').innerHTML = '<span>✅ Logado com sucesso!</span>';
-            document.getElementById('loginEconodataStatus').classList.add('logado');
+            document.getElementById('loginEconodataStatus').innerHTML = '<span>✓ Conectado</span>';
+            document.getElementById('loginEconodataStatus').className = 'status-badge online';
             document.getElementById('loginEconodataForm').style.display = 'none';
         }
 
         // Login no Econodata
         document.getElementById('btnLoginEconodata').addEventListener('click', async () => {
-            const btnLoginEconodata = document.getElementById('btnLoginEconodata');
-
-            btnLoginEconodata.disabled = true;
-            btnLoginEconodata.textContent = '🌐 Abrindo navegador...';
+            const btn = document.getElementById('btnLoginEconodata');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Abrindo...';
 
             try {
                 const response = await fetch('/api/login-econodata', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 const data = await response.json();
 
                 if (data.sucesso) {
                     marcarComoLogadoEconodata();
-                    alert('Login no Econodata salvo com sucesso! Cookies foram salvos.');
                 } else {
                     alert('Erro: ' + data.erro);
-                    btnLoginEconodata.disabled = false;
-                    btnLoginEconodata.textContent = '🌐 Abrir Navegador para Login';
+                    btn.disabled = false;
+                    btn.innerHTML = '🌐 Abrir Navegador';
                 }
-
             } catch (error) {
                 console.error('Erro:', error);
                 alert('Erro ao fazer login no Econodata');
-                btnLoginEconodata.disabled = false;
-                btnLoginEconodata.textContent = '🌐 Abrir Navegador para Login';
+                btn.disabled = false;
+                btn.innerHTML = '🌐 Abrir Navegador';
             }
         });
 
-        // Verificar logins ao carregar a página
+        // Verificar logins ao carregar
         verificarLogin();
         verificarLoginEconodata();
 
         let resultadosAtuais = [];
         let arquivoPlanilha = null;
 
-        // Upload de planilha - fazer preview
+        // Upload de planilha
         document.getElementById('planilhaUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -586,41 +839,27 @@
                 const data = await response.json();
 
                 if (data.sucesso) {
-                    // Mostrar preview
                     document.getElementById('previewSection').style.display = 'block';
-                    document.getElementById('previewTotal').textContent = `✅ ${data.total} empresas encontradas na planilha`;
-                    document.getElementById('previewColunas').textContent = `Colunas: ${data.colunas.filter(c => c).join(', ')}`;
+                    document.getElementById('previewCount').textContent = `${data.total} empresas`;
 
-                    // Criar tabela de preview
-                    let previewHtml = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
-                    previewHtml += '<thead><tr>';
-                    ['Razão Social', 'Nome Fantasia', 'CNPJ', 'Município'].forEach(col => {
-                        previewHtml += `<th style="background: #667eea; color: white; padding: 8px; text-align: left;">${col}</th>`;
+                    let html = '<table><thead><tr><th>Razão Social</th><th>CNPJ</th><th>Cidade</th></tr></thead><tbody>';
+                    data.preview.slice(0, 5).forEach(emp => {
+                        html += `<tr>
+                            <td>${(emp.razaoSocial || '-').substring(0, 30)}${emp.razaoSocial?.length > 30 ? '...' : ''}</td>
+                            <td>${emp.cnpj || '-'}</td>
+                            <td>${emp.municipio || '-'}</td>
+                        </tr>`;
                     });
-                    previewHtml += '</tr></thead><tbody>';
-
-                    data.preview.forEach(emp => {
-                        previewHtml += '<tr>';
-                        previewHtml += `<td style="padding: 6px; border-bottom: 1px solid #eee;">${emp.razaoSocial || '-'}</td>`;
-                        previewHtml += `<td style="padding: 6px; border-bottom: 1px solid #eee;">${emp.nomeFantasia || '-'}</td>`;
-                        previewHtml += `<td style="padding: 6px; border-bottom: 1px solid #eee;">${emp.cnpj || '-'}</td>`;
-                        previewHtml += `<td style="padding: 6px; border-bottom: 1px solid #eee;">${emp.municipio || '-'}</td>`;
-                        previewHtml += '</tr>';
-                    });
-
-                    if (data.total > 10) {
-                        previewHtml += `<tr><td colspan="4" style="padding: 10px; text-align: center; font-style: italic; color: #666;">... e mais ${data.total - 10} empresas</td></tr>`;
+                    if (data.total > 5) {
+                        html += `<tr><td colspan="3" style="text-align: center; color: #6e7681;">+${data.total - 5} mais...</td></tr>`;
                     }
+                    html += '</tbody></table>';
+                    document.getElementById('previewTable').innerHTML = html;
 
-                    previewHtml += '</tbody></table>';
-                    document.getElementById('previewTable').innerHTML = previewHtml;
-
-                    // Habilitar botão
                     document.getElementById('btnProcessar').disabled = false;
                 } else {
-                    alert('Erro ao processar planilha: ' + data.erro);
+                    alert('Erro: ' + data.erro);
                 }
-
             } catch (error) {
                 console.error('Erro ao fazer preview:', error);
                 alert('Erro ao processar planilha');
@@ -636,24 +875,24 @@
                 return;
             }
 
-            const modeloIA = document.getElementById('modeloIA').value;
-
-            // Limpar resultados anteriores
             resultadosAtuais = [];
 
             // Mostrar loading
-            document.getElementById('loading').classList.add('show');
-            document.getElementById('loading').querySelector('p:last-child').textContent = 'Iniciando processamento...';
+            document.getElementById('loadingOverlay').classList.add('show');
+            document.getElementById('loadingText').textContent = 'Iniciando...';
+            document.getElementById('loadingSubtext').textContent = 'Preparando processamento';
             document.getElementById('btnProcessar').disabled = true;
-            document.getElementById('results').classList.add('show');
-            document.getElementById('resultsContent').innerHTML = '<p>Processando...</p>';
 
-            // Criar FormData
+            // Mostrar seção de resultados
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('progressBar').style.display = 'block';
+            document.getElementById('resultsBody').innerHTML = '';
+
             const formData = new FormData();
             formData.append('planilha', arquivoPlanilha);
-            formData.append('modeloIA', modeloIA);
+            formData.append('modeloIA', document.getElementById('modeloIA').value);
 
-            // Fazer requisição POST
             const response = await fetch('/api/processar-planilha', {
                 method: 'POST',
                 body: formData
@@ -677,29 +916,28 @@
                             const data = JSON.parse(line.replace('data: ', ''));
 
                             if (data.tipo === 'info') {
-                                document.getElementById('loading').querySelector('p:last-child').textContent = data.dados.mensagem;
+                                document.getElementById('loadingSubtext').textContent = data.dados.mensagem;
 
                             } else if (data.tipo === 'progresso') {
                                 const { resultado, atual, total } = data.dados;
                                 resultadosAtuais.push(resultado);
 
-                                // Atualizar mensagem de loading
-                                document.getElementById('loading').querySelector('p:last-child').textContent =
-                                    `Processando empresa ${atual} de ${total}...`;
+                                const progresso = (atual / total) * 100;
+                                document.getElementById('progressFill').style.width = progresso + '%';
+                                document.getElementById('loadingText').textContent = `Processando ${atual} de ${total}`;
+                                document.getElementById('loadingSubtext').textContent = resultado.nomeIdentificado || resultado.razaoSocial;
+                                document.getElementById('resultsCount').textContent = `${atual} de ${total} empresas`;
 
-                                // Atualizar resultados em tempo real
-                                mostrarResultadosProgressivo(resultadosAtuais, atual, total);
+                                adicionarLinha(resultado, atual);
 
                             } else if (data.tipo === 'concluido') {
-                                // Esconder loading
-                                document.getElementById('loading').classList.remove('show');
+                                document.getElementById('loadingOverlay').classList.remove('show');
                                 document.getElementById('btnProcessar').disabled = false;
-
-                                // Mostrar resultados finais
-                                mostrarResultadosProgressivo(resultadosAtuais, resultadosAtuais.length, resultadosAtuais.length);
+                                document.getElementById('progressBar').style.display = 'none';
+                                document.getElementById('resultsCount').textContent = `${resultadosAtuais.length} empresas`;
 
                             } else if (data.tipo === 'erro') {
-                                document.getElementById('loading').classList.remove('show');
+                                document.getElementById('loadingOverlay').classList.remove('show');
                                 document.getElementById('btnProcessar').disabled = false;
                                 alert('Erro: ' + data.dados.erro);
                             }
@@ -710,245 +948,120 @@
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                document.getElementById('loading').classList.remove('show');
+                document.getElementById('loadingOverlay').classList.remove('show');
                 document.getElementById('btnProcessar').disabled = false;
                 alert('Erro ao processar requisição');
             }
         });
 
-        function mostrarResultadosProgressivo(resultados, atual, total) {
-            const content = document.getElementById('resultsContent');
+        function adicionarLinha(resultado, index) {
+            const tbody = document.getElementById('resultsBody');
+            const municipioUf = [resultado.municipio, resultado.uf].filter(Boolean).join('/');
 
-            if (!resultados || resultados.length === 0) {
-                content.innerHTML = '<p>Aguardando resultados...</p>';
-                return;
-            }
-
-            let html = `
-                <p style="font-size: 18px; font-weight: 600; margin-bottom: 15px;">
-                    📊 Progresso: ${atual} de ${total} empresas processadas
-                </p>
-                <div class="export-buttons">
-                    <button class="btn-export btn-export-csv" onclick="exportarCSV()">
-                        📊 Exportar CSV
-                    </button>
-                    <button class="btn-export btn-export-json" onclick="exportarJSON()">
-                        📄 Exportar JSON
-                    </button>
-                    <button class="btn-export btn-export-txt" onclick="exportarTXT()">
-                        📝 Exportar TXT
-                    </button>
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th rowspan="2" style="vertical-align: middle;">#</th>
-                                <th colspan="4" class="group-header">🏢 Dados Empresa</th>
-                                <th colspan="3" class="group-header">📱 Instagram</th>
-                                <th colspan="4" class="group-header">💬 Contatos</th>
-                                <th colspan="3" class="group-header">📍 Google Meu Negócio</th>
-                            </tr>
-                            <tr>
-                                <!-- Dados Empresa -->
-                                <th class="group-cnpj">Nome Identificado</th>
-                                <th class="group-cnpj">Razão Social</th>
-                                <th class="group-cnpj">CNPJ</th>
-                                <th class="group-cnpj">Município/UF</th>
-
-                                <!-- Instagram -->
-                                <th class="group-instagram">Username</th>
-                                <th class="group-instagram">Perfil</th>
-                                <th class="group-instagram">Linktree</th>
-
-                                <!-- Contatos -->
-                                <th class="group-contatos">Telefone Bio</th>
-                                <th class="group-contatos">WhatsApp Bio</th>
-                                <th class="group-contatos">Site</th>
-                                <th class="group-contatos">Tel. Planilha</th>
-
-                                <!-- Google Meu Negócio -->
-                                <th class="group-gmb">Link GMB</th>
-                                <th class="group-gmb">Telefone GMB</th>
-                                <th class="group-gmb">Horário</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index}</td>
+                <td class="cell-name cell-truncate" title="${resultado.nomeIdentificado || ''}">${resultado.nomeIdentificado || '-'}</td>
+                <td class="cell-truncate" title="${resultado.razaoSocial || ''}">${resultado.razaoSocial || '-'}</td>
+                <td>${resultado.cnpj || '-'}</td>
+                <td>${municipioUf || '-'}</td>
+                <td>${resultado.instagramUsername ? `@${resultado.instagramUsername}` : '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.instagramUrl ? `<a href="${resultado.instagramUrl}" target="_blank" class="cell-link">Ver</a>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.linkTreeBio ? `<a href="${resultado.linkTreeBio}" target="_blank" class="cell-link">Ver</a>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.contatoBio ? `<span class="cell-badge badge-phone">${resultado.contatoBio}${resultado.contatoBioTemWhatsApp === true ? ' <span class="badge-whatsapp">✓</span>' : resultado.contatoBioTemWhatsApp === false ? ' <span class="badge-no-whatsapp">✗</span>' : ''}</span>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.whatsappBio ? `<a href="${resultado.whatsappBio}" target="_blank" class="cell-link badge-whatsapp">${resultado.numeroWhatsappBio || 'Ver'}</a>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.siteProprioBio ? `<a href="${resultado.siteProprioBio}" target="_blank" class="cell-link">Ver</a>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.telefone || '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.linkGMB ? `<a href="${resultado.linkGMB}" target="_blank" class="cell-link">Ver</a>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.telefoneGMB ? `${resultado.telefoneGMB}${resultado.telefoneGMBTemWhatsApp === true ? ' <span class="badge-whatsapp">✓</span>' : resultado.telefoneGMBTemWhatsApp === false ? ' <span class="badge-no-whatsapp">✗</span>' : ''}` : '<span class="cell-empty">-</span>'}</td>
+                <td class="cell-truncate" title="${resultado.horarioFuncionamento || ''}">${resultado.horarioFuncionamento || '<span class="cell-empty">-</span>'}</td>
             `;
-
-            resultados.forEach((resultado, index) => {
-                // Município/UF
-                const municipioUf = [resultado.municipio, resultado.uf].filter(Boolean).join('/');
-
-                html += `
-                    <tr>
-                        <td><strong>${index + 1}</strong></td>
-
-                        <!-- Dados Empresa -->
-                        <td class="group-cnpj"><strong>${resultado.nomeIdentificado || '-'}</strong></td>
-                        <td class="group-cnpj" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${resultado.razaoSocial || ''}">${resultado.razaoSocial || '-'}</td>
-                        <td class="group-cnpj">${resultado.cnpj || '-'}</td>
-                        <td class="group-cnpj">${municipioUf || '-'}</td>
-
-                        <!-- Instagram -->
-                        <td class="group-instagram">${resultado.instagramUsername ? `@${resultado.instagramUsername}` : '-'}</td>
-                        <td class="group-instagram">${resultado.instagramUrl ? `<a href="${resultado.instagramUrl}" target="_blank">🔗 Perfil</a>` : '-'}</td>
-                        <td class="group-instagram">${resultado.linkTreeBio ? `<a href="${resultado.linkTreeBio}" target="_blank">🌳 Ver</a>` : '-'}</td>
-
-                        <!-- Contatos -->
-                        <td class="group-contatos">${resultado.contatoBio ? `<span class="badge">📱 ${resultado.contatoBio}${resultado.contatoBioTemWhatsApp === true ? ' ✅WA' : resultado.contatoBioTemWhatsApp === false ? ' ❌WA' : ''}</span>` : '-'}</td>
-                        <td class="group-contatos">${resultado.whatsappBio ? `<a href="${resultado.whatsappBio}" target="_blank">💬 ${resultado.numeroWhatsappBio || 'Ver'}</a>` : '-'}</td>
-                        <td class="group-contatos">${resultado.siteProprioBio ? `<a href="${resultado.siteProprioBio}" target="_blank">🌐 Ver</a>` : '-'}</td>
-                        <td class="group-contatos">${resultado.telefone || '-'}</td>
-
-                        <!-- Google Meu Negócio -->
-                        <td class="group-gmb">${resultado.linkGMB ? `<a href="${resultado.linkGMB}" target="_blank">🔗 Ver</a>` : '-'}</td>
-                        <td class="group-gmb">${resultado.telefoneGMB ? `📞 ${resultado.telefoneGMB}${resultado.telefoneGMBTemWhatsApp === true ? ' ✅WA' : resultado.telefoneGMBTemWhatsApp === false ? ' ❌WA' : ''}` : '-'}</td>
-                        <td class="group-gmb" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${resultado.horarioFuncionamento || ''}">${resultado.horarioFuncionamento || '-'}</td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table></div>';
-            content.innerHTML = html;
+            tbody.appendChild(tr);
         }
 
         // Funções de exportação
         function exportarCSV() {
-            if (!resultadosAtuais || resultadosAtuais.length === 0) {
+            if (!resultadosAtuais.length) {
                 alert('Não há resultados para exportar');
                 return;
             }
 
-            // Cabeçalhos do CSV
             const headers = [
-                'Número',
-                'Nome Identificado',
-                'Razão Social',
-                'Nome Fantasia',
-                'CNPJ',
-                'Município',
-                'UF',
-                'Telefone Planilha',
-                'Instagram Username',
-                'Instagram URL',
-                'Telefone Bio',
-                'Tel Bio Tem WhatsApp',
-                'WhatsApp Bio (Link)',
-                'WhatsApp Bio (Número)',
-                'Site Bio',
-                'Linktree Bio',
-                'Link GMB',
-                'Telefone GMB',
-                'Tel GMB Tem WhatsApp',
-                'Horário Funcionamento'
+                'Nome Identificado', 'Razão Social', 'Nome Fantasia', 'CNPJ', 'Município', 'UF',
+                'Telefone Planilha', 'Instagram Username', 'Instagram URL', 'Telefone Bio',
+                'Tel Bio Tem WhatsApp', 'WhatsApp Bio', 'Site Bio', 'Linktree', 'Link GMB',
+                'Telefone GMB', 'Tel GMB Tem WhatsApp', 'Horário'
             ];
 
-            // Converter dados para CSV
             let csv = headers.join(',') + '\n';
 
-            resultadosAtuais.forEach((resultado, index) => {
+            resultadosAtuais.forEach(r => {
                 const linha = [
-                    index + 1,
-                    '"' + (resultado.nomeIdentificado || '') + '"',
-                    '"' + (resultado.razaoSocial || '') + '"',
-                    '"' + (resultado.nomeFantasia || '') + '"',
-                    resultado.cnpj || '',
-                    '"' + (resultado.municipio || '') + '"',
-                    resultado.uf || '',
-                    resultado.telefone || '',
-                    resultado.instagramUsername || '',
-                    resultado.instagramUrl || '',
-                    resultado.contatoBio || '',
-                    resultado.contatoBioTemWhatsApp === true ? 'Sim' : resultado.contatoBioTemWhatsApp === false ? 'Não' : '',
-                    resultado.whatsappBio || '',
-                    resultado.numeroWhatsappBio || '',
-                    resultado.siteProprioBio || '',
-                    resultado.linkTreeBio || '',
-                    resultado.linkGMB || '',
-                    resultado.telefoneGMB || '',
-                    resultado.telefoneGMBTemWhatsApp === true ? 'Sim' : resultado.telefoneGMBTemWhatsApp === false ? 'Não' : '',
-                    '"' + (resultado.horarioFuncionamento || '') + '"'
+                    `"${r.nomeIdentificado || ''}"`,
+                    `"${r.razaoSocial || ''}"`,
+                    `"${r.nomeFantasia || ''}"`,
+                    r.cnpj || '',
+                    `"${r.municipio || ''}"`,
+                    r.uf || '',
+                    r.telefone || '',
+                    r.instagramUsername || '',
+                    r.instagramUrl || '',
+                    r.contatoBio || '',
+                    r.contatoBioTemWhatsApp === true ? 'Sim' : r.contatoBioTemWhatsApp === false ? 'Não' : '',
+                    r.whatsappBio || '',
+                    r.siteProprioBio || '',
+                    r.linkTreeBio || '',
+                    r.linkGMB || '',
+                    r.telefoneGMB || '',
+                    r.telefoneGMBTemWhatsApp === true ? 'Sim' : r.telefoneGMBTemWhatsApp === false ? 'Não' : '',
+                    `"${r.horarioFuncionamento || ''}"`
                 ];
-
                 csv += linha.join(',') + '\n';
             });
 
-            // Download do arquivo
-            baixarArquivo(csv, 'empresas-processadas.csv', 'text/csv');
+            baixarArquivo(csv, 'empresas.csv', 'text/csv');
         }
 
         function exportarJSON() {
-            if (!resultadosAtuais || resultadosAtuais.length === 0) {
+            if (!resultadosAtuais.length) {
                 alert('Não há resultados para exportar');
                 return;
             }
-
-            const json = JSON.stringify(resultadosAtuais, null, 2);
-            baixarArquivo(json, 'empresas-processadas.json', 'application/json');
+            baixarArquivo(JSON.stringify(resultadosAtuais, null, 2), 'empresas.json', 'application/json');
         }
 
         function exportarTXT() {
-            if (!resultadosAtuais || resultadosAtuais.length === 0) {
+            if (!resultadosAtuais.length) {
                 alert('Não há resultados para exportar');
                 return;
             }
 
-            let txt = '================================================\n';
-            txt += '     RELATÓRIO DE PROCESSAMENTO - EMPRESAS\n';
-            txt += '================================================\n\n';
-            txt += `Total de empresas: ${resultadosAtuais.length}\n`;
-            txt += `Data: ${new Date().toLocaleString('pt-BR')}\n\n`;
+            let txt = `RELATÓRIO - ${resultadosAtuais.length} EMPRESAS\n`;
+            txt += `Data: ${new Date().toLocaleString('pt-BR')}\n`;
+            txt += '='.repeat(60) + '\n\n';
 
-            resultadosAtuais.forEach((resultado, index) => {
-                txt += '================================================\n';
-                txt += `${index + 1}. ${resultado.nomeIdentificado || 'N/A'}\n`;
-                txt += '================================================\n\n';
-
-                txt += '🏢 DADOS DA EMPRESA:\n';
-                txt += `   Nome Identificado: ${resultado.nomeIdentificado || 'N/A'}\n`;
-                txt += `   Razão Social: ${resultado.razaoSocial || 'N/A'}\n`;
-                txt += `   Nome Fantasia: ${resultado.nomeFantasia || 'N/A'}\n`;
-                txt += `   CNPJ: ${resultado.cnpj || 'N/A'}\n`;
-                txt += `   Município/UF: ${resultado.municipio || 'N/A'}/${resultado.uf || 'N/A'}\n`;
-                txt += `   Telefone (Planilha): ${resultado.telefone || 'N/A'}\n\n`;
-
-                txt += '📱 INSTAGRAM:\n';
-                txt += `   Username: @${resultado.instagramUsername || 'N/A'}\n`;
-                txt += `   Perfil: ${resultado.instagramUrl || 'N/A'}\n`;
-                txt += `   Linktree: ${resultado.linkTreeBio || 'N/A'}\n\n`;
-
-                txt += '💬 CONTATOS (Bio):\n';
-                txt += `   Telefone Bio: ${resultado.contatoBio || 'N/A'}${resultado.contatoBioTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.contatoBioTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
-                txt += `   WhatsApp Bio: ${resultado.whatsappBio || 'N/A'}${resultado.numeroWhatsappBio ? ` (${resultado.numeroWhatsappBio})` : ''}\n`;
-                txt += `   Site Bio: ${resultado.siteProprioBio || 'N/A'}\n\n`;
-
-                txt += '📍 GOOGLE MEU NEGÓCIO:\n';
-                txt += `   Link GMB: ${resultado.linkGMB || 'N/A'}\n`;
-                txt += `   Telefone GMB: ${resultado.telefoneGMB || 'N/A'}${resultado.telefoneGMBTemWhatsApp === true ? ' (✅ Tem WhatsApp)' : resultado.telefoneGMBTemWhatsApp === false ? ' (❌ Não tem WhatsApp)' : ''}\n`;
-                txt += `   Horário de Funcionamento: ${resultado.horarioFuncionamento || 'N/A'}\n\n`;
+            resultadosAtuais.forEach((r, i) => {
+                txt += `${i + 1}. ${r.nomeIdentificado || r.razaoSocial}\n`;
+                txt += '-'.repeat(40) + '\n';
+                txt += `   Razão Social: ${r.razaoSocial || '-'}\n`;
+                txt += `   CNPJ: ${r.cnpj || '-'}\n`;
+                txt += `   Cidade: ${r.municipio || '-'}/${r.uf || '-'}\n`;
+                txt += `   Instagram: ${r.instagramUsername ? '@' + r.instagramUsername : '-'}\n`;
+                txt += `   WhatsApp: ${r.whatsappBio || '-'}\n`;
+                txt += `   Telefone GMB: ${r.telefoneGMB || '-'}\n`;
+                txt += '\n';
             });
 
-            txt += '================================================\n';
-            txt += '                   FIM DO RELATÓRIO\n';
-            txt += '================================================\n';
-
-            baixarArquivo(txt, 'empresas-processadas.txt', 'text/plain');
+            baixarArquivo(txt, 'empresas.txt', 'text/plain');
         }
 
-        function baixarArquivo(conteudo, nomeArquivo, tipoMime) {
-            const blob = new Blob([conteudo], { type: tipoMime + ';charset=utf-8;' });
-            const link = document.createElement('a');
+        function baixarArquivo(conteudo, nome, tipo) {
+            const blob = new Blob([conteudo], { type: tipo + ';charset=utf-8' });
             const url = URL.createObjectURL(blob);
-
-            link.setAttribute('href', url);
-            link.setAttribute('download', nomeArquivo);
-            link.style.visibility = 'hidden';
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = nome;
+            a.click();
             URL.revokeObjectURL(url);
         }
     </script>
