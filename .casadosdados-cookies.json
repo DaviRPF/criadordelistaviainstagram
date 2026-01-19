@@ -1,0 +1,60 @@
+[
+  {
+    "name": "_ga_V63DWYGMHX",
+    "value": "GS2.1.s1764721839$o1$g0$t1764721849$j50$l0$h0",
+    "domain": ".casadosdados.com.br",
+    "path": "/",
+    "expires": 1799281849.67771,
+    "size": 59,
+    "httpOnly": false,
+    "secure": false,
+    "session": false,
+    "sameParty": false,
+    "sourceScheme": "Secure",
+    "sourcePort": 443
+  },
+  {
+    "name": "userAuth",
+    "value": "%7B%22authenticated%22%3Atrue%2C%22apiKey%22%3A%2287316a8083649d2a4a7bd345437f028d58d470f4fe11e5c74c8ddb04c7f849abe0630709c7d7e46f942bf24160f92d1064b3f87168e49fa8dfbae843f0e749d5%22%2C%22user%22%3A%7B%7D%7D",
+    "domain": "portal.casadosdados.com.br",
+    "path": "/",
+    "expires": 1796279449.333568,
+    "size": 214,
+    "httpOnly": false,
+    "secure": false,
+    "session": false,
+    "sameParty": false,
+    "sourceScheme": "Secure",
+    "sourcePort": 443
+  },
+  {
+    "name": "_ga",
+    "value": "GA1.1.125634629.1764721839",
+    "domain": ".casadosdados.com.br",
+    "path": "/",
+    "expires": 1799281839.157888,
+    "size": 29,
+    "httpOnly": false,
+    "secure": false,
+    "session": false,
+    "sameParty": false,
+    "sourceScheme": "Secure",
+    "sourcePort": 443
+  },
+  {
+    "name": "cf_clearance",
+    "value": "QBrm5Z140B1rSfm39GFtcxqrF4eHrFfwFR1y8yyDBho-1764721842-1.2.1.1-q0pWVw3wi3OZNuzsuGXAyw6VHnpZFMy4MDPXtFv82bU345k5genOap_ljnupQJiTSYrNP4GSBNbzScqbRgVT2OXG6UM5eN8jf38A3Rqxpo_9CLf84U1cegweaLAE5IQyUT4S3B7g21zWma1vOTT_d5FX5Bycj1TCmPTAoYbniPkNd3TtMeIoJiwZZwRESgrujbnyX07aZ8KQZl_WL9XAFAffF_wfrxXA8jvU0TDlne8",
+    "domain": ".casadosdados.com.br",
+    "path": "/",
+    "expires": 1796257838.984462,
+    "size": 310,
+    "httpOnly": true,
+    "secure": true,
+    "session": false,
+    "sameSite": "None",
+    "sameParty": false,
+    "sourceScheme": "Secure",
+    "sourcePort": 443,
+    "partitionKey": "https://casadosdados.com.br"
+  }
+]

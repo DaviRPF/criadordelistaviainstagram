@@ -440,51 +440,143 @@
             color: #484f58;
         }
 
-        /* Loading */
-        .loading-overlay {
+        /* Loading - Barra fixa no topo (nao bloqueia a tela) */
+        .loading-bar {
             display: none;
             position: fixed;
             top: 0;
-            left: 0;
+            left: 320px;
             right: 0;
-            bottom: 0;
-            background: rgba(13, 17, 23, 0.9);
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 20px;
             z-index: 100;
-            justify-content: center;
-            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
-        .loading-overlay.show {
+        .loading-bar.show {
             display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
-        .loading-content {
-            text-align: center;
-        }
-
-        .spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid #30363d;
+        .loading-bar .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #30363d;
             border-top-color: #58a6ff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
+            flex-shrink: 0;
+        }
+
+        .loading-bar .loading-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .loading-bar .loading-text {
+            font-size: 0.95em;
+            color: #e6edf3;
+            font-weight: 500;
+        }
+
+        .loading-bar .loading-subtext {
+            font-size: 0.8em;
+            color: #8b949e;
+        }
+
+        .loading-bar .loading-progress {
+            width: 200px;
+            height: 6px;
+            background: #30363d;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .loading-bar .loading-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #238636, #3fb950);
+            transition: width 0.3s ease;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        .loading-text {
-            font-size: 1.1em;
-            color: #e6edf3;
-            margin-bottom: 8px;
+        /* Historico de Listas */
+        .historico-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #30363d;
         }
 
-        .loading-subtext {
-            font-size: 0.9em;
+        .historico-section h3 {
+            font-size: 0.85em;
             color: #8b949e;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .historico-lista {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .historico-item {
+            padding: 8px 10px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .historico-item:hover {
+            border-color: #58a6ff;
+            background: rgba(88, 166, 255, 0.05);
+        }
+
+        .historico-item .nome {
+            font-size: 0.85em;
+            color: #e6edf3;
+            font-weight: 500;
+        }
+
+        .historico-item .info {
+            font-size: 0.75em;
+            color: #6e7681;
+            margin-top: 2px;
+        }
+
+        .historico-item .acoes {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .historico-item .btn-small {
+            padding: 4px 8px;
+            font-size: 0.7em;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            width: auto;
+        }
+
+        .btn-carregar {
+            background: #238636;
+            color: white;
+        }
+
+        .btn-deletar {
+            background: #f85149;
+            color: white;
         }
 
         /* Empty State */
@@ -553,6 +645,87 @@
             color: #6e7681;
             margin-top: 4px;
         }
+
+        /* Barra de Filtros */
+        .filter-bar {
+            display: none;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .filter-bar.show {
+            display: flex;
+        }
+
+        .filter-bar h3 {
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 0.8em;
+            color: #8b949e;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .filter-group select {
+            padding: 6px 10px;
+            font-size: 0.85em;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #e6edf3;
+            min-width: 100px;
+        }
+
+        .filter-group select:focus {
+            border-color: #58a6ff;
+            outline: none;
+        }
+
+        .filter-stats {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .filter-stats span {
+            font-size: 0.85em;
+            color: #3fb950;
+            font-weight: 500;
+        }
+
+        .btn-limpar-filtros {
+            padding: 6px 12px;
+            font-size: 0.8em;
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            border-radius: 4px;
+            cursor: pointer;
+            width: auto;
+        }
+
+        .btn-limpar-filtros:hover {
+            background: #30363d;
+            color: #e6edf3;
+        }
     </style>
 </head>
 <body>
@@ -596,6 +769,22 @@
                 </div>
             </div>
 
+            <!-- Login Casa dos Dados -->
+            <div class="card" id="loginCasaDadosCard">
+                <h2>🏠 Login Casa dos Dados</h2>
+                <div class="status-badge offline" id="loginCasaDadosStatus">
+                    <span>Não conectado</span>
+                </div>
+                <div id="loginCasaDadosForm" style="margin-top: 12px;">
+                    <p class="text-muted" style="margin-bottom: 12px;">
+                        Necessário para extrair pesquisas salvas
+                    </p>
+                    <button class="btn-secondary" id="btnLoginCasaDados">
+                        🌐 Abrir Navegador
+                    </button>
+                </div>
+            </div>
+
             <!-- Upload Planilha -->
             <div class="card disabled" id="planilhaCard">
                 <h2>📁 Carregar Planilha</h2>
@@ -634,6 +823,60 @@
                     </button>
                 </form>
             </div>
+
+            <!-- Casa dos Dados -->
+            <div class="card" id="casaDadosCard">
+                <h2>🏠 Casa dos Dados</h2>
+                <p class="text-muted" style="margin-bottom: 12px;">
+                    Cole o link de uma pesquisa salva do portal Casa dos Dados
+                </p>
+
+                <form id="casaDadosForm">
+                    <div class="form-group">
+                        <label>URL da Pesquisa</label>
+                        <input
+                            type="url"
+                            id="casaDadosUrl"
+                            placeholder="https://portal.casadosdados.com.br/..."
+                            style="width: 100%; padding: 10px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.9em;"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Limite de Empresas (opcional)</label>
+                        <input
+                            type="number"
+                            id="casaDadosLimite"
+                            placeholder="Ex: 50 (deixe vazio para todas)"
+                            min="1"
+                            style="width: 100%; padding: 10px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.9em;"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modelo de IA</label>
+                        <select id="casaDadosModeloIA" style="width: 100%; padding: 10px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.9em;">
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="btnCasaDados">
+                        🔍 Extrair Empresas
+                    </button>
+                </form>
+            </div>
+
+            <!-- Historico de Listas Salvas -->
+            <div class="card">
+                <h2>📚 Listas Salvas</h2>
+                <div class="historico-lista" id="historicoLista">
+                    <p class="text-muted" style="text-align: center; padding: 10px;">Carregando...</p>
+                </div>
+            </div>
         </aside>
 
         <!-- Main Content -->
@@ -651,6 +894,9 @@
                         <span class="results-count" id="resultsCount">0 empresas</span>
                     </div>
                     <div class="export-buttons">
+                        <button class="btn-export" style="background: #a371f7;" onclick="salvarLista()" id="btnSalvarLista">
+                            💾 Salvar Lista
+                        </button>
                         <button class="btn-export btn-export-csv" onclick="exportarCSV()">
                             📊 CSV
                         </button>
@@ -660,6 +906,70 @@
                         <button class="btn-export btn-export-txt" onclick="exportarTXT()">
                             📝 TXT
                         </button>
+                    </div>
+                </div>
+
+                <!-- Barra de Filtros -->
+                <div class="filter-bar" id="filterBar">
+                    <h3>🔍 Filtros:</h3>
+
+                    <div class="filter-group">
+                        <label>Instagram:</label>
+                        <select id="filtroInstagram" onchange="aplicarFiltros()">
+                            <option value="">Todos</option>
+                            <option value="com">Com Instagram</option>
+                            <option value="sem">Sem Instagram</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>WhatsApp:</label>
+                        <select id="filtroWhatsapp" onchange="aplicarFiltros()">
+                            <option value="">Todos</option>
+                            <option value="com">Com WhatsApp</option>
+                            <option value="sem">Sem WhatsApp</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Telefone GMB:</label>
+                        <select id="filtroTelGMB" onchange="aplicarFiltros()">
+                            <option value="">Todos</option>
+                            <option value="com">Com Telefone</option>
+                            <option value="sem">Sem Telefone</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Linktree:</label>
+                        <select id="filtroLinktree" onchange="aplicarFiltros()">
+                            <option value="">Todos</option>
+                            <option value="com">Com Linktree</option>
+                            <option value="sem">Sem Linktree</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Site:</label>
+                        <select id="filtroSite" onchange="aplicarFiltros()">
+                            <option value="">Todos</option>
+                            <option value="com">Com Site</option>
+                            <option value="sem">Sem Site</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Email:</label>
+                        <select id="filtroEmail" onchange="aplicarFiltros()">
+                            <option value="">Todos</option>
+                            <option value="com">Com Email</option>
+                            <option value="sem">Sem Email</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-stats">
+                        <span id="filterStats">0 de 0</span>
+                        <button class="btn-limpar-filtros" onclick="limparFiltros()">Limpar</button>
                     </div>
                 </div>
 
@@ -704,12 +1014,15 @@
         </main>
     </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-content">
-            <div class="spinner"></div>
+    <!-- Loading Bar (barra fixa no topo, nao bloqueia tela) -->
+    <div class="loading-bar" id="loadingBar">
+        <div class="spinner"></div>
+        <div class="loading-info">
             <div class="loading-text" id="loadingText">Processando...</div>
             <div class="loading-subtext" id="loadingSubtext">Aguarde</div>
+        </div>
+        <div class="loading-progress">
+            <div class="loading-progress-fill" id="loadingProgressFill" style="width: 0%"></div>
         </div>
     </div>
 
@@ -811,11 +1124,61 @@
             }
         });
 
+        // Verificar status de login Casa dos Dados
+        async function verificarLoginCasaDados() {
+            try {
+                const response = await fetch('/api/verificar-login-casadosdados');
+                const data = await response.json();
+                if (data.logado) {
+                    marcarComoLogadoCasaDados();
+                }
+            } catch (error) {
+                console.error('Erro ao verificar login Casa dos Dados:', error);
+            }
+        }
+
+        function marcarComoLogadoCasaDados() {
+            document.getElementById('loginCasaDadosStatus').innerHTML = '<span>✓ Conectado</span>';
+            document.getElementById('loginCasaDadosStatus').className = 'status-badge online';
+            document.getElementById('loginCasaDadosForm').style.display = 'none';
+        }
+
+        // Login no Casa dos Dados
+        document.getElementById('btnLoginCasaDados').addEventListener('click', async () => {
+            const btn = document.getElementById('btnLoginCasaDados');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Abrindo...';
+
+            try {
+                const response = await fetch('/api/login-casadosdados', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.sucesso) {
+                    marcarComoLogadoCasaDados();
+                } else {
+                    alert('Erro: ' + data.erro);
+                    btn.disabled = false;
+                    btn.innerHTML = '🌐 Abrir Navegador';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao fazer login no Casa dos Dados');
+                btn.disabled = false;
+                btn.innerHTML = '🌐 Abrir Navegador';
+            }
+        });
+
         // Verificar logins ao carregar
         verificarLogin();
         verificarLoginEconodata();
+        verificarLoginCasaDados();
 
         let resultadosAtuais = [];
+        let resultadosFiltrados = []; // Resultados apos aplicar filtros
         let arquivoPlanilha = null;
 
         // Upload de planilha
@@ -1063,6 +1426,622 @@
             a.download = nome;
             a.click();
             URL.revokeObjectURL(url);
+        }
+
+        // ========================================
+        // Listas Salvas (Historico)
+        // ========================================
+
+        let urlPesquisaAtual = '';
+
+        async function carregarHistorico() {
+            try {
+                const response = await fetch('/api/listas');
+                const data = await response.json();
+
+                const container = document.getElementById('historicoLista');
+
+                if (!data.listas || data.listas.length === 0) {
+                    container.innerHTML = '<p class="text-muted" style="text-align: center; padding: 10px;">Nenhuma lista salva</p>';
+                    return;
+                }
+
+                container.innerHTML = data.listas.map(lista => `
+                    <div class="historico-item">
+                        <div class="nome">${lista.nome}</div>
+                        <div class="info">${lista.totalEmpresas} empresas - ${new Date(lista.dataExtracao).toLocaleDateString('pt-BR')}</div>
+                        <div class="acoes">
+                            <button class="btn-small btn-carregar" onclick="carregarLista('${lista.id}')">Carregar</button>
+                            <button class="btn-small btn-deletar" onclick="deletarLista('${lista.id}')">Deletar</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar historico:', error);
+                document.getElementById('historicoLista').innerHTML = '<p class="text-muted" style="text-align: center; padding: 10px; color: #f85149;">Erro ao carregar</p>';
+            }
+        }
+
+        async function salvarLista() {
+            const resultados = modoCasaDados ? resultadosCasaDados : resultadosAtuais;
+
+            if (!resultados || resultados.length === 0) {
+                alert('Nao ha resultados para salvar');
+                return;
+            }
+
+            // Verificar se ainda esta processando
+            const estaProcessando = document.getElementById('loadingBar').classList.contains('show');
+            const statusMsg = estaProcessando
+                ? `\n\n⚠️ O processamento ainda esta em andamento.\nVoce pode salvar agora e continuar coletando mais empresas.`
+                : '';
+
+            const nome = prompt(
+                `Salvar ${resultados.length} empresas coletadas${statusMsg}\n\nDigite um nome para esta lista:`,
+                `Extracao ${new Date().toLocaleDateString('pt-BR')} - ${resultados.length} empresas`
+            );
+            if (!nome) return;
+
+            try {
+                const response = await fetch('/api/listas/salvar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome,
+                        urlOrigem: urlPesquisaAtual || window.location.href,
+                        empresas: [...resultados] // Copia do array atual
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.sucesso) {
+                    alert(`Lista salva com sucesso!\n${resultados.length} empresas salvas.${estaProcessando ? '\n\nO processamento continua em andamento.' : ''}`);
+                    carregarHistorico();
+                } else {
+                    alert('Erro ao salvar: ' + data.erro);
+                }
+            } catch (error) {
+                console.error('Erro ao salvar lista:', error);
+                alert('Erro ao salvar lista');
+            }
+        }
+
+        async function carregarLista(id) {
+            try {
+                const response = await fetch(`/api/listas/${id}`);
+                const data = await response.json();
+
+                if (!data.sucesso) {
+                    alert('Erro ao carregar lista: ' + data.erro);
+                    return;
+                }
+
+                resultadosCasaDados = data.lista.empresas;
+                resultadosCasaDadosFiltrados = [...data.lista.empresas]; // Inicializar filtrados
+                modoCasaDados = true;
+                urlPesquisaAtual = data.lista.urlOrigem;
+
+                // Mostrar resultados
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('resultsSection').style.display = 'block';
+                document.getElementById('progressBar').style.display = 'none';
+                document.getElementById('resultsCount').textContent = `${resultadosCasaDados.length} empresas`;
+
+                // Mostrar barra de filtros e resetar filtros
+                mostrarBarraFiltros(true);
+                limparFiltros();
+                document.getElementById('filterStats').textContent = `${resultadosCasaDados.length} de ${resultadosCasaDados.length}`;
+
+                atualizarTabelaCasaDados();
+                resultadosCasaDados.forEach((emp, i) => adicionarLinhaCasaDados(emp, i + 1));
+
+                alert(`Lista "${data.lista.nome}" carregada com ${resultadosCasaDados.length} empresas`);
+            } catch (error) {
+                console.error('Erro ao carregar lista:', error);
+                alert('Erro ao carregar lista');
+            }
+        }
+
+        async function deletarLista(id) {
+            if (!confirm('Tem certeza que deseja deletar esta lista?')) return;
+
+            try {
+                const response = await fetch(`/api/listas/${id}`, { method: 'DELETE' });
+                const data = await response.json();
+
+                if (data.sucesso) {
+                    carregarHistorico();
+                } else {
+                    alert('Erro ao deletar: ' + data.erro);
+                }
+            } catch (error) {
+                console.error('Erro ao deletar lista:', error);
+                alert('Erro ao deletar lista');
+            }
+        }
+
+        // Carregar historico ao iniciar
+        carregarHistorico();
+
+        // ========================================
+        // Casa dos Dados
+        // ========================================
+
+        let resultadosCasaDados = [];
+        let resultadosCasaDadosFiltrados = []; // Resultados filtrados do Casa dos Dados
+        let modoCasaDados = false;
+
+        // ========================================
+        // Sistema de Filtros
+        // ========================================
+
+        function aplicarFiltros() {
+            const dados = modoCasaDados ? resultadosCasaDados : resultadosAtuais;
+            if (!dados || dados.length === 0) return;
+
+            const filtroInstagram = document.getElementById('filtroInstagram').value;
+            const filtroWhatsapp = document.getElementById('filtroWhatsapp').value;
+            const filtroTelGMB = document.getElementById('filtroTelGMB').value;
+            const filtroLinktree = document.getElementById('filtroLinktree').value;
+            const filtroSite = document.getElementById('filtroSite').value;
+            const filtroEmail = document.getElementById('filtroEmail').value;
+
+            let filtrados = dados.filter(r => {
+                // Filtro Instagram
+                if (filtroInstagram === 'com' && !r.instagramUsername) return false;
+                if (filtroInstagram === 'sem' && r.instagramUsername) return false;
+
+                // Filtro WhatsApp (bio ou linktree)
+                const temWhatsapp = r.whatsappBio || r.whatsappLinkTree || r.numeroWhatsappBio || r.numeroWhatsappLinkTree;
+                if (filtroWhatsapp === 'com' && !temWhatsapp) return false;
+                if (filtroWhatsapp === 'sem' && temWhatsapp) return false;
+
+                // Filtro Telefone GMB
+                if (filtroTelGMB === 'com' && !r.telefoneGMB) return false;
+                if (filtroTelGMB === 'sem' && r.telefoneGMB) return false;
+
+                // Filtro Linktree
+                if (filtroLinktree === 'com' && !r.linkTree) return false;
+                if (filtroLinktree === 'sem' && r.linkTree) return false;
+
+                // Filtro Site (siteProprio ou siteProprioLinktree)
+                const temSite = r.siteProprio || r.siteProprioLinktree;
+                if (filtroSite === 'com' && !temSite) return false;
+                if (filtroSite === 'sem' && temSite) return false;
+
+                // Filtro Email
+                if (filtroEmail === 'com' && !r.emailCNPJ) return false;
+                if (filtroEmail === 'sem' && r.emailCNPJ) return false;
+
+                return true;
+            });
+
+            // Atualizar array de filtrados
+            if (modoCasaDados) {
+                resultadosCasaDadosFiltrados = filtrados;
+            } else {
+                resultadosFiltrados = filtrados;
+            }
+
+            // Atualizar estatisticas
+            document.getElementById('filterStats').textContent = `${filtrados.length} de ${dados.length}`;
+            document.getElementById('resultsCount').textContent = `${filtrados.length} empresas (filtrado)`;
+
+            // Atualizar tabela visual
+            atualizarTabelaComFiltro(filtrados);
+        }
+
+        function atualizarTabelaComFiltro(filtrados) {
+            const tbody = document.getElementById('resultsBodyCasaDados') || document.getElementById('resultsBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            filtrados.forEach((resultado, i) => {
+                if (modoCasaDados) {
+                    adicionarLinhaCasaDados(resultado, i + 1);
+                } else {
+                    adicionarLinha(resultado, i + 1);
+                }
+            });
+        }
+
+        function limparFiltros() {
+            document.getElementById('filtroInstagram').value = '';
+            document.getElementById('filtroWhatsapp').value = '';
+            document.getElementById('filtroTelGMB').value = '';
+            document.getElementById('filtroLinktree').value = '';
+            document.getElementById('filtroSite').value = '';
+            document.getElementById('filtroEmail').value = '';
+
+            const dados = modoCasaDados ? resultadosCasaDados : resultadosAtuais;
+
+            // Resetar filtrados para todos os dados
+            if (modoCasaDados) {
+                resultadosCasaDadosFiltrados = [...resultadosCasaDados];
+            } else {
+                resultadosFiltrados = [...resultadosAtuais];
+            }
+
+            document.getElementById('filterStats').textContent = `${dados.length} de ${dados.length}`;
+            document.getElementById('resultsCount').textContent = `${dados.length} empresas`;
+
+            // Recarregar tabela com todos os dados
+            atualizarTabelaComFiltro(dados);
+        }
+
+        function mostrarBarraFiltros(mostrar = true) {
+            const filterBar = document.getElementById('filterBar');
+            if (mostrar) {
+                filterBar.classList.add('show');
+            } else {
+                filterBar.classList.remove('show');
+            }
+        }
+
+        function obterDadosParaExportar() {
+            // Retorna os dados filtrados se houver filtro ativo, senao retorna todos
+            if (modoCasaDados) {
+                const temFiltro = document.getElementById('filtroInstagram').value ||
+                                  document.getElementById('filtroWhatsapp').value ||
+                                  document.getElementById('filtroTelGMB').value ||
+                                  document.getElementById('filtroLinktree').value ||
+                                  document.getElementById('filtroSite').value ||
+                                  document.getElementById('filtroEmail').value;
+
+                if (temFiltro && resultadosCasaDadosFiltrados.length > 0) {
+                    return resultadosCasaDadosFiltrados;
+                }
+                return resultadosCasaDados;
+            } else {
+                const temFiltro = document.getElementById('filtroInstagram').value ||
+                                  document.getElementById('filtroWhatsapp').value ||
+                                  document.getElementById('filtroTelGMB').value ||
+                                  document.getElementById('filtroLinktree').value ||
+                                  document.getElementById('filtroSite').value ||
+                                  document.getElementById('filtroEmail').value;
+
+                if (temFiltro && resultadosFiltrados.length > 0) {
+                    return resultadosFiltrados;
+                }
+                return resultadosAtuais;
+            }
+        }
+
+        document.getElementById('casaDadosForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const url = document.getElementById('casaDadosUrl').value;
+            const limite = document.getElementById('casaDadosLimite').value;
+            const modeloIA = document.getElementById('casaDadosModeloIA').value;
+
+            if (!url || !url.includes('casadosdados')) {
+                alert('Por favor, insira um link valido do Casa dos Dados');
+                return;
+            }
+
+            resultadosCasaDados = [];
+            resultadosCasaDadosFiltrados = [];
+            modoCasaDados = true;
+            urlPesquisaAtual = url;
+
+            // Mostrar loading bar (nao bloqueia tela)
+            document.getElementById('loadingBar').classList.add('show');
+            document.getElementById('loadingText').textContent = 'Iniciando...';
+            document.getElementById('loadingSubtext').textContent = 'Conectando ao Casa dos Dados';
+            document.getElementById('loadingProgressFill').style.width = '0%';
+            document.getElementById('btnCasaDados').disabled = true;
+
+            // Mostrar secao de resultados com tabela diferente
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('progressBar').style.display = 'block';
+
+            // Mostrar barra de filtros e resetar
+            mostrarBarraFiltros(true);
+            limparFiltros();
+
+            atualizarTabelaCasaDados();
+
+            try {
+                const response = await fetch('/api/processar-casadosdados', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ urlPesquisa: url, modeloIA, limite })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n');
+
+                    for (const line of lines) {
+                        if (!line.trim() || !line.startsWith('data: ')) continue;
+
+                        try {
+                            const data = JSON.parse(line.replace('data: ', ''));
+
+                            if (data.tipo === 'info') {
+                                document.getElementById('loadingSubtext').textContent = data.dados.mensagem;
+
+                            } else if (data.tipo === 'progresso') {
+                                const { resultado, atual, total } = data.dados;
+                                resultadosCasaDados.push(resultado);
+
+                                const progresso = (atual / total) * 100;
+                                document.getElementById('progressFill').style.width = progresso + '%';
+                                document.getElementById('loadingProgressFill').style.width = progresso + '%';
+                                document.getElementById('loadingText').textContent = `Processando ${atual} de ${total}`;
+                                document.getElementById('loadingSubtext').textContent = resultado.razaoSocial || resultado.nomeFantasia || 'Extraindo dados...';
+                                document.getElementById('resultsCount').textContent = `${atual} empresas`;
+
+                                adicionarLinhaCasaDados(resultado, atual);
+
+                            } else if (data.tipo === 'concluido') {
+                                document.getElementById('loadingBar').classList.remove('show');
+                                document.getElementById('btnCasaDados').disabled = false;
+                                document.getElementById('progressBar').style.display = 'none';
+                                document.getElementById('resultsCount').textContent = `${resultadosCasaDados.length} empresas`;
+
+                                // Inicializar filtrados e atualizar stats
+                                resultadosCasaDadosFiltrados = [...resultadosCasaDados];
+                                document.getElementById('filterStats').textContent = `${resultadosCasaDados.length} de ${resultadosCasaDados.length}`;
+
+                            } else if (data.tipo === 'erro') {
+                                document.getElementById('loadingBar').classList.remove('show');
+                                document.getElementById('btnCasaDados').disabled = false;
+                                alert('Erro: ' + data.dados.erro);
+                            }
+                        } catch (e) {
+                            console.error('Erro ao processar evento:', e);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('loadingBar').classList.remove('show');
+                document.getElementById('btnCasaDados').disabled = false;
+                alert('Erro ao processar requisicao');
+            }
+        });
+
+        function atualizarTabelaCasaDados() {
+            const tableWrapper = document.querySelector('.table-wrapper');
+            tableWrapper.innerHTML = `
+                <div class="table-scroll">
+                    <table class="main-table" style="min-width: 2550px;">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">#</th>
+                                <th colspan="3" class="group-header group-empresa">Identificacao</th>
+                                <th colspan="3" class="group-header" style="border-color: #a371f7 !important; color: #a371f7;">Situacao</th>
+                                <th colspan="2" class="group-header group-contatos">Endereco</th>
+                                <th colspan="2" class="group-header" style="border-color: #58a6ff !important; color: #58a6ff;">CNPJ Contato</th>
+                                <th colspan="4" class="group-header" style="border-color: #f778ba !important; color: #f778ba;">Instagram</th>
+                                <th colspan="3" class="group-header" style="border-color: #3fb950 !important; color: #3fb950;">Linktree</th>
+                                <th colspan="3" class="group-header group-gmb">Google Meu Negocio</th>
+                            </tr>
+                            <tr>
+                                <th>Razao Social</th>
+                                <th>Nome Fantasia</th>
+                                <th>CNPJ</th>
+                                <th>Situacao</th>
+                                <th>Porte</th>
+                                <th>Capital</th>
+                                <th>Cidade/UF</th>
+                                <th>Bairro</th>
+                                <th>Tel CNPJ</th>
+                                <th>Email CNPJ</th>
+                                <th>@Username</th>
+                                <th>Zap Bio</th>
+                                <th>Site Bio</th>
+                                <th>Link</th>
+                                <th>Zap</th>
+                                <th>Site</th>
+                                <th>Tel GMB</th>
+                                <th>Horario</th>
+                                <th>Link GMB</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBodyCasaDados">
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function adicionarLinhaCasaDados(resultado, index) {
+            const tbody = document.getElementById('resultsBodyCasaDados');
+            const cidadeUf = [resultado.municipio, resultado.uf].filter(Boolean).join('/');
+
+            // Helper para criar link de telefone clicavel (whatsapp)
+            const criarLinkTelefone = (numero) => {
+                if (!numero) return '<span class="cell-empty">-</span>';
+                const apenasNumeros = numero.replace(/\D/g, '');
+                const numeroFormatado = apenasNumeros.startsWith('55') ? apenasNumeros : '55' + apenasNumeros;
+                return `<a href="https://wa.me/${numeroFormatado}" target="_blank" class="cell-link badge-whatsapp" title="Abrir WhatsApp">${numero}</a>`;
+            };
+
+            // Helper para criar link de email clicavel
+            const criarLinkEmail = (email) => {
+                if (!email) return '<span class="cell-empty">-</span>';
+                return `<a href="mailto:${email}" target="_blank" class="cell-link" title="Enviar email">${email}</a>`;
+            };
+
+            // Helper para criar link clicavel
+            const criarLink = (url, texto) => {
+                if (!url) return '<span class="cell-empty">-</span>';
+                return `<a href="${url}" target="_blank" class="cell-link" title="${url}">${texto || 'Ver'}</a>`;
+            };
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index}</td>
+                <td class="cell-name cell-truncate" title="${resultado.razaoSocial || ''}">${resultado.razaoSocial || '-'}</td>
+                <td class="cell-truncate" title="${resultado.nomeFantasia || ''}">${resultado.nomeFantasia || '-'}</td>
+                <td>${resultado.cnpj || '-'}</td>
+                <td><span class="cell-badge ${resultado.situacaoCadastral === 'ATIVA' ? 'badge-phone' : ''}">${resultado.situacaoCadastral || '-'}</span></td>
+                <td>${resultado.porte || '-'}</td>
+                <td class="cell-truncate" title="${resultado.capitalSocial || ''}">${resultado.capitalSocial || '-'}</td>
+                <td>${cidadeUf || '-'}</td>
+                <td>${resultado.bairro || '-'}</td>
+                <td>${criarLinkTelefone(resultado.telefoneCNPJ)}</td>
+                <td class="cell-truncate">${criarLinkEmail(resultado.emailCNPJ)}</td>
+                <td>${resultado.instagramUsername ? `<a href="${resultado.instagramUrl || '#'}" target="_blank" class="cell-link">@${resultado.instagramUsername}</a>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${resultado.whatsappBio ? `<a href="${resultado.whatsappBio}" target="_blank" class="cell-link badge-whatsapp">${resultado.numeroWhatsappBio || 'Ver'}</a>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${criarLink(resultado.siteProprio, 'Ver')}</td>
+                <td>${criarLink(resultado.linkTree, 'Abrir')}</td>
+                <td>${resultado.whatsappLinkTree ? `<a href="${resultado.whatsappLinkTree}" target="_blank" class="cell-link badge-whatsapp">${resultado.numeroWhatsappLinkTree || 'Ver'}</a>` : '<span class="cell-empty">-</span>'}</td>
+                <td>${criarLink(resultado.siteProprioLinktree, 'Ver')}</td>
+                <td>${criarLinkTelefone(resultado.telefoneGMB)}</td>
+                <td class="cell-truncate" title="${resultado.horarioFuncionamento || ''}">${resultado.horarioFuncionamento || '<span class="cell-empty">-</span>'}</td>
+                <td>${criarLink(resultado.linkGMB, 'Ver')}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        // Atualizar funcoes de exportacao para suportar Casa dos Dados e filtros
+        const exportarCSVOriginal = exportarCSV;
+        exportarCSV = function() {
+            if (modoCasaDados && resultadosCasaDados.length > 0) {
+                exportarCSVCasaDados();
+            } else {
+                exportarCSVOriginal();
+            }
+        };
+
+        const exportarJSONOriginal = exportarJSON;
+        exportarJSON = function() {
+            if (modoCasaDados && resultadosCasaDados.length > 0) {
+                const dadosExportar = obterDadosParaExportar();
+                baixarArquivo(JSON.stringify(dadosExportar, null, 2), 'casadados-empresas.json', 'application/json');
+            } else {
+                exportarJSONOriginal();
+            }
+        };
+
+        const exportarTXTOriginal = exportarTXT;
+        exportarTXT = function() {
+            if (modoCasaDados && resultadosCasaDados.length > 0) {
+                exportarTXTCasaDados();
+            } else {
+                exportarTXTOriginal();
+            }
+        };
+
+        function exportarCSVCasaDados() {
+            const dadosExportar = obterDadosParaExportar();
+
+            const headers = [
+                'Razao Social', 'Nome Fantasia', 'CNPJ', 'Situacao', 'Data Abertura',
+                'Natureza Juridica', 'Porte', 'Capital Social',
+                'Logradouro', 'Numero', 'Complemento', 'Bairro', 'Municipio', 'UF', 'CEP',
+                'Telefone CNPJ', 'Email CNPJ', 'CNAE Principal', 'Descricao CNAE',
+                'Instagram Username', 'Instagram URL', 'WhatsApp Bio', 'Numero WhatsApp Bio',
+                'Linktree', 'Site Proprio', 'WhatsApp Linktree', 'Site Linktree',
+                'Link GMB', 'Telefone GMB', 'Horario Funcionamento',
+                'Socios', 'URL Casa Dados'
+            ];
+
+            let csv = headers.join(',') + '\n';
+
+            dadosExportar.forEach(r => {
+                const socios = r.socios ? r.socios.map(s => s.nome).join('; ') : '';
+                const linha = [
+                    `"${r.razaoSocial || ''}"`,
+                    `"${r.nomeFantasia || ''}"`,
+                    r.cnpj || '',
+                    r.situacaoCadastral || '',
+                    r.dataAbertura || '',
+                    `"${r.naturezaJuridica || ''}"`,
+                    r.porte || '',
+                    `"${r.capitalSocial || ''}"`,
+                    `"${r.logradouro || ''}"`,
+                    r.numero || '',
+                    `"${r.complemento || ''}"`,
+                    `"${r.bairro || ''}"`,
+                    `"${r.municipio || ''}"`,
+                    r.uf || '',
+                    r.cep || '',
+                    r.telefoneCNPJ || '',
+                    r.emailCNPJ || '',
+                    r.cnaePrincipal || '',
+                    `"${r.descricaoCnaePrincipal || ''}"`,
+                    r.instagramUsername || '',
+                    r.instagramUrl || '',
+                    r.whatsappBio || '',
+                    r.numeroWhatsappBio || '',
+                    r.linkTree || '',
+                    r.siteProprio || '',
+                    r.whatsappLinkTree || '',
+                    r.siteProprioLinktree || '',
+                    r.linkGMB || '',
+                    r.telefoneGMB || '',
+                    `"${r.horarioFuncionamento || ''}"`,
+                    `"${socios}"`,
+                    r.urlEmpresa || ''
+                ];
+                csv += linha.join(',') + '\n';
+            });
+
+            baixarArquivo(csv, 'casadados-empresas.csv', 'text/csv');
+        }
+
+        function exportarTXTCasaDados() {
+            const dadosExportar = obterDadosParaExportar();
+
+            let txt = `RELATORIO CASA DOS DADOS - ${dadosExportar.length} EMPRESAS\n`;
+            txt += `Data: ${new Date().toLocaleString('pt-BR')}\n`;
+            txt += '='.repeat(70) + '\n\n';
+
+            dadosExportar.forEach((r, i) => {
+                txt += `${i + 1}. ${r.razaoSocial || r.nomeFantasia || 'N/A'}\n`;
+                txt += '-'.repeat(50) + '\n';
+                txt += `   CNPJ: ${r.cnpj || '-'}\n`;
+                txt += `   Nome Fantasia: ${r.nomeFantasia || '-'}\n`;
+                txt += `   Situacao: ${r.situacaoCadastral || '-'}\n`;
+                txt += `   Abertura: ${r.dataAbertura || '-'}\n`;
+                txt += `   Porte: ${r.porte || '-'}\n`;
+                txt += `   Capital: ${r.capitalSocial || '-'}\n`;
+                txt += `   Endereco: ${r.logradouro || '-'}, ${r.numero || '-'}, ${r.bairro || '-'}\n`;
+                txt += `   Cidade: ${r.municipio || '-'}/${r.uf || '-'} - CEP: ${r.cep || '-'}\n`;
+                txt += '\n';
+                txt += `   --- CONTATOS CNPJ ---\n`;
+                txt += `   Telefone CNPJ: ${r.telefoneCNPJ || '-'}\n`;
+                txt += `   Email CNPJ: ${r.emailCNPJ || '-'}\n`;
+                txt += '\n';
+                txt += `   --- INSTAGRAM ---\n`;
+                txt += `   Instagram: ${r.instagramUsername ? '@' + r.instagramUsername : '-'}\n`;
+                txt += `   Instagram URL: ${r.instagramUrl || '-'}\n`;
+                txt += `   WhatsApp Bio: ${r.whatsappBio || '-'}\n`;
+                txt += `   Numero WhatsApp: ${r.numeroWhatsappBio || '-'}\n`;
+                txt += `   Linktree: ${r.linkTree || '-'}\n`;
+                txt += `   Site Proprio: ${r.siteProprio || '-'}\n`;
+                if (r.whatsappLinkTree) {
+                    txt += `   WhatsApp Linktree: ${r.whatsappLinkTree}\n`;
+                }
+                if (r.siteProprioLinktree) {
+                    txt += `   Site via Linktree: ${r.siteProprioLinktree}\n`;
+                }
+                txt += '\n';
+                txt += `   --- GOOGLE MEU NEGOCIO ---\n`;
+                txt += `   Telefone GMB: ${r.telefoneGMB || '-'}\n`;
+                txt += `   Horario: ${r.horarioFuncionamento || '-'}\n`;
+                txt += `   Link GMB: ${r.linkGMB || '-'}\n`;
+                txt += '\n';
+                txt += `   CNAE: ${r.cnaePrincipal || '-'} - ${r.descricaoCnaePrincipal || '-'}\n`;
+                if (r.socios && r.socios.length > 0) {
+                    txt += `   Socios: ${r.socios.map(s => s.nome).join(', ')}\n`;
+                }
+                txt += '\n';
+            });
+
+            baixarArquivo(txt, 'casadados-empresas.txt', 'text/plain');
         }
     </script>
 </body>
